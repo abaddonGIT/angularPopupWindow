@@ -26,6 +26,10 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
        }
    ];
 
-   var window = $popupWindow.init({});
+   var window = $scope.popup =  $popupWindow.init({
+       wrapTpl: 'tpl/windowTpl.html',
+       locScope: $scope
+   });
+
 } ]);
 
