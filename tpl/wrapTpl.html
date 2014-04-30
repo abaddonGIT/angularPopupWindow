@@ -1,9 +1,11 @@
 <div id="window-wrap" ng-show="inner.show">
-    <div id="wrap-inner" style="width: {{inner.width || 0}}px; height: {{inner.height || 0}}px;">
-        <div id="wrap-block" style="width: {{wrap.width || 0}}px; padding: {{wrap.padding || 0}}px; {{wrap.margin}}">
-            <div data-popup-header></div>
-            <div data-popup-content></div>
-            <div data-popup-footer></div>
+    <div id="wrap-inner" ng-style="{width:inner.width + 'px', height:inner.height + 'px', padding:inner.padding}">
+        <div id="wrap-block" ng-style="{width:wrap.width + 'px', padding:wrap.padding + 'px'}">
+            <div id="window-styled-block">
+                <div data-popup-header></div>
+                <div data-popup-content></div>
+                <div data-popup-footer></div>
+            </div>
         </div>
     </div>
 </div>

@@ -23,6 +23,8 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
            src: 'img/003.jpg'
        },{
            src: 'img/002.jpg'
+       },{
+           src: 'img/10.jpg'
        }
    ];
 
@@ -38,3 +40,4 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
 
 } ]);
 
+//style="width: {{inner.width || 0}}px; height: {{inner.height || 0}}px; {{inner.padding}}"

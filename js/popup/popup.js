@@ -19,35 +19,65 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     };
 }]);
 /*
-* Основной шаблон
+ * Основной шаблон
  */
 popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
+        scope.inner = {};
+        scope.wrap = {};
 
+        var config = $popupWindow.config();
+        $http.post(config.tpls.wrapTpl).success(function (template) {
+            elem.html(template);
+            var content = elem.contents();
+            $compile(content)(scope);
+            scope.inner.tplLoad = true;
+        });
     };
 }]);
 /*
-* Шапка всплывающего окна
+ * Шапка всплывающего окна
  */
 popup.directive("popupHeader", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-
+        scope.header = {};
+        var config = $popupWindow.config();
+        $http.post(config.tpls.headerTpl).success(function (template) {
+            elem.html(template);
+            var content = elem.contents();
+            $compile(content)(scope);
+            scope.header.tplLoad = true;
+        });
     };
 }]);
 /*
-* Область контента
+ * Область контента
  */
 popup.directive("popupContent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-
+        scope.content = {};
+        var config = $popupWindow.config();
+        $http.post(config.tpls.contentTpl).success(function (template) {
+            elem.html(template);
+            var content = elem.contents();
+            $compile(content)(scope);
+            scope.content.tplLoad = true;
+        });
     };
 }]);
 /*
-* Облать подвала
+ * Облать подвала
  */
 popup.directive("popupFooter", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-
+        scope.footer = {};
+        var config = $popupWindow.config();
+        $http.post(config.tpls.footerTpl).success(function (template) {
+            elem.html(template);
+            var content = elem.contents();
+            $compile(content)(scope);
+            scope.footer.tplLoad = true;
+        });
     };
 }]);
 
@@ -65,7 +95,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             resize: true,
             padding: 15,
             margin: 10,
-            outPadding: 200,
+            outPadding: 100,
             winType: 'image',
             maxSizes: {
                 width: 1024,
@@ -75,11 +105,11 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 width: 640,
                 height: 480
             },
-            imagesQueue: []
+            queue: []
         }, settings);
 
         /*
-        * Open window event
+         * Open window event
          */
         this.scope.$on('window:open', function (e, elem, attr) {
             scope = this.scope;
@@ -104,32 +134,113 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
 
     Window.prototype = {
         /*
-        * Building popup
+         * Building popup
          */
         buildWindow: function () {
             sizes = this.sizes = this.getTrueWindowSize();
+            var inner = {
+                show: true,
+                padding: config.margin + 'px 0 ' + config.margin + 'px 0',
+                width: sizes.pageWidthScroll,
+                height: sizes.viewHeight
+            };
             //Размер внешнего блока
             var wrap = {
-                show: true,
-                margin: config.margin,
                 padding: config.padding,
-                width: sizes.pageHeightScroll - (config.padding * 2)
-            };
-
-            var inner = {
-                width: sizes.pageWidthScroll,
-                height: sizes.pageHeightScroll
+                width: sizes.pageWidthScroll - config.outPadding * 2
             };
 
             if (wrap.width < config.minSizes.width) {
-                wrap.width = config.minSizes.width - config * 2;
+                wrap.width = config.minSizes.width;
             } else {
                 if (wrap.width > config.maxSizes.width) {
-                    wrap.width = config.maxSizes.width - config * 2;
+                    wrap.width = config.maxSizes.width;
                 }
+            }
+            var header = {};
+            var content = {
+                img: {}
             };
+            var footer = {};
 
-            this.updateScope();
+            angular.extend(scope.wrap, wrap);
+            angular.extend(scope.inner, inner);
+            angular.extend(scope.header, header);
+            angular.extend(scope.content, content);
+            angular.extend(scope.footer, footer);
+            //Как только все части окна подгруженны начинаем впихивать туда контент
+            var loadTpl = $interval(function () {
+                if (scope.inner.tplLoad && scope.header.tplLoad && scope.content.tplLoad && scope.footer.tplLoad) {
+                    $interval.cancel(loadTpl);
+                    this.loadContent();
+                    //this.updateScope();
+                }
+            }.bind(this), 500);
+
+            //Ресайз окна
+            $window.onresize = function () {
+                this.windowResize();
+            }.bind(this);
+        },
+        //Пересчет размеров окна
+        windowResize: function () {
+            sizes = this.getTrueWindowSize(), newWinWidth = sizes.pageWidthScroll, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
+            scope.$apply(function () {
+                scope.inner.width = newWinWidth;
+                scope.inner.height = newWinHeight;
+
+                wrap = sizes.pageWidthScroll - config.outPadding * 2;
+                //Получаем новые размеры изображения
+                if (wrap < config.minSizes.width) {
+                    wrap = config.minSizes.width;
+                } else {
+                    if (wrap > config.maxSizes.width) {
+                        wrap = config.maxSizes.width;
+                    }
+                }
+                scope.wrap.width = wrap;
+                newSizes = this.getNewSize(this.currContent);
+                if (this.currContent.ratio < 1) {
+                    if (newSizes[0] <= config.minSizes.width) {
+                        scope.wrap.width = config.minSizes.width;
+                    } else {
+                        scope.wrap.width = newSizes[0];
+                    }
+                } else {
+                    scope.wrap.width = newSizes[0];
+                }
+                scope.content.img.width = newSizes[0];
+                scope.content.img.height = newSizes[1];
+            }.bind(this));
+
+        },
+        loadContent: function () {
+            var item = null;
+            switch (config.winType) {
+                case 'image':
+                    item = new Item();
+                    this.root.$on("window:contentLoaded", function (e, item) {
+                        if (!item.error) {
+                            this.queue.push(item);
+                            angular.extend(scope.content.img, item);
+                            if (item.ratio < 1) {
+                                if (item.width <= config.minSizes.width) {
+                                    scope.wrap.width = config.minSizes.width;
+                                } else {
+                                    scope.wrap.width = item.width;
+                                }
+                            } else {
+                                scope.wrap.width = item.width;
+                            }
+                            this.currContent = item;
+                            this.updateScope();
+                        }
+                    }.bind(this));
+                    break;
+                case 'ajax':
+                    console.log('Подгрузка через ajax');
+                    break;
+            }
         },
         updateScope: function () {
             this.root.$$phase || this.root.$digest();
@@ -194,6 +305,61 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 'pageWidthScroll': xScroll,
                 'pageHeightScroll': yScroll
             };
+        },
+        getNewSize: function (img) {
+            var wrapWidth = scope.wrap.width, winHeight = sizes.viewHeight, result = {};
+            //Желаемые размеры картинки
+            var desiredWidth = wrapWidth, desiredHeight = winHeight - (config.margin * 2 + config.padding * 2);
+
+            if (img.ratio < 1) {
+                desiredHeight -= config.outPadding;
+            }
+
+            //Проверка на минимальную высоту
+            if (desiredHeight < config.minSizes.height) {
+                desiredHeight = config.minSizes.height;
+            }
+
+            if ((img.oric_width / desiredWidth) > (img.oric_height / desiredHeight)) {
+                result[0] = desiredWidth;
+                result[1] = Math.round(img.oric_height * desiredWidth / img.oric_width);
+            } else {
+                result[0] = Math.round(img.oric_width * desiredHeight / img.oric_height);
+                result[1] = desiredHeight;
+            }
+            return result;
+        }
+    };
+
+    var Item = function () {
+        switch (config.winType) {
+            case 'image':
+                var link = win.el[0].href;
+                if (!link) {
+                    throw ("Вы не заполнили атребут href у источника!");
+                } else {
+                    var img = new Image();
+                    img.onload = function () {
+                        this.oric_width = img.width;
+                        this.oric_height = img.height;
+                        this.src = link;
+                        this.el = img;
+                        this.ratio = this.oric_width / this.oric_height;
+                        var newSizes = win.getNewSize(this);
+                        this.width = newSizes[0];
+                        this.height = newSizes[1];
+                        win.root.$broadcast("window:contentLoaded", this);
+                        img = 0;
+                    }.bind(this);
+                    img.onerror = function () {
+                        this.error = true;
+                        this.el = img;
+                        win.root.$broadcast("window:contentLoaded", this);
+                        img = 0;
+                    }.bind(this);
+                    img.src = link;
+                }
+                break;
         }
     };
 
