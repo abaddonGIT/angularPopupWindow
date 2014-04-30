@@ -8,6 +8,14 @@ body {
     min-height: 100%;
     background: rgba(0, 0, 0, 0.5);
     position: fixed;
+    overflow-y: auto;
+}
+
+#wrap-block {
+    background-color: #fff;
+    border-radius: 10px;
+    margin: 0 auto;
+    height: 100%;
 }
 
 .images {

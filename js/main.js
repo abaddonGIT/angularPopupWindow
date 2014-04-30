@@ -27,8 +27,13 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
    ];
 
    var window = $scope.popup =  $popupWindow.init({
-       wrapTpl: 'tpl/windowTpl.html',
-       locScope: $scope
+       tpls: {
+           wrapTpl: 'tpl/wrapTpl.html',
+           headerTpl: 'tpl/windowHeaderTpl.html',
+           contentTpl: 'tpl/windowContentTpl.html',
+           footerTpl: 'tpl/windowFooterTpl.html'
+       },
+       scope: $scope
    });
 
 } ]);
