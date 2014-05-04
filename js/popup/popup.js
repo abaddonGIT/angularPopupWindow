@@ -7,7 +7,9 @@
  * Description: Open popup window
  */
 var popup = angular.module("popupWindow", []);
-
+popup.factory("templateCache", ["$cacheFactory", function ($cacheFactory) {
+    return $cacheFactory("template-cache");
+}]);
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
         link: function (scope, elem, attr) {
@@ -30,68 +32,67 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     };
 }]);
 /*
+* Подгрузка компонентов шаблона
+ */
+popup.directive("popupSection",['$popupWindow', '$http', '$compile', 'templateCache', function ($popupWindow, $http, $compile, templateCache) {
+    return function (scope, elem, attr) {
+        var sector = attr.popupSection, config = $popupWindow.config();
+        switch (sector) {
+            case 'header':
+                scope.header = {el: elem};
+                var temp = templateCache.get(config.tpls.headerTpl), tpl = config.tpls.headerTpl;
+                break;
+            case 'content':
+                scope.content = {el: elem};
+                var temp = templateCache.get(config.tpls.contentTpl), tpl = config.tpls.contentTpl;
+                break;
+            case 'footer':
+                scope.footer = {el: elem};
+                var temp = templateCache.get(config.tpls.footerTpl), tpl = config.tpls.footerTpl;
+                break;
+        }
+
+        if (temp) {
+            $compile(temp)(scope);
+            scope[sector].tplLoad = true;
+        } else {
+            $http.post(tpl).success(function (template) {
+                elem.html(template);
+                var content = elem.contents();
+                $compile(content)(scope);
+                scope[sector].tplLoad = true;
+                templateCache.put(tpl, content);
+            });
+        }
+    };
+}]);
+/*
  * Основной шаблон
  */
-popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
+popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', function ($popupWindow, $http, $compile, templateCache) {
     return function (scope, elem, attr) {
         scope.inner = {};
         scope.wrap = {};
         scope.navigation = {};
 
-        var config = $popupWindow.config();
-        $http.post(config.tpls.wrapTpl).success(function (template) {
-            elem.html(template);
-            var content = elem.contents();
-            $compile(content)(scope);
+        var config = $popupWindow.config(), temp = templateCache.get(config.tpls.wrapTpl);
+        if (temp) {
+            $compile(temp)(scope);
             scope.inner.tplLoad = true;
-        });
+        } else {
+            $http.post(config.tpls.wrapTpl).success(function (template) {
+                elem.html(template);
+                var content = elem.contents();
+                $compile(content)(scope);
+                scope.inner.tplLoad = true;
+                templateCache.put(config.tpls.wrapTpl, content);
+            });
+        }
     };
 }]);
 /*
  * Шапка всплывающего окна
  */
-popup.directive("popupHeader", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
-    return function (scope, elem, attr) {
-        scope.header = {el: elem};
-        var config = $popupWindow.config();
-        $http.post(config.tpls.headerTpl).success(function (template) {
-            elem.html(template);
-            var content = elem.contents();
-            $compile(content)(scope);
-            scope.header.tplLoad = true;
-        });
-    };
-}]);
-/*
- * Область контента
- */
-popup.directive("popupContent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
-    return function (scope, elem, attr) {
-        scope.content = {el: elem};
-        var config = $popupWindow.config();
-        $http.post(config.tpls.contentTpl).success(function (template) {
-            elem.html(template);
-            var content = elem.contents();
-            $compile(content)(scope);
-            scope.content.tplLoad = true;
-        });
-    };
-}]);
-/*
- * Облать подвала
- */
-popup.directive("popupFooter", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
-    return function (scope, elem, attr) {
-        scope.footer = {el: elem};
-        var config = $popupWindow.config();
-        $http.post(config.tpls.footerTpl).success(function (template) {
-            elem.html(template);
-            var content = elem.contents();
-            $compile(content)(scope);
-            scope.footer.tplLoad = true;
-        });
-    };
-}]);
 
 popup.directive("imageIncontent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
@@ -353,8 +354,13 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                     //навигация
                     if (this.group) {
                         if (this.index === 0) {//Первый
-                            scope.navigation.next.show = true;
-                            scope.navigation.prev.show = false;
+                            if (this.setElements[this.group].length === 1) {
+                                scope.navigation.next.show = false;
+                                scope.navigation.prev.show = false;
+                            } else {
+                                scope.navigation.next.show = true;
+                                scope.navigation.prev.show = false;
+                            }
                         } else if (this.index === (this.setElements[this.group].length - 1)) {//последний
                             scope.navigation.next.show = false;
                             scope.navigation.prev.show = true;
@@ -394,36 +400,34 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             if (w.innerHeight && w.scrollMaxY) {
                 xScroll = d.body.scrollWidth;
                 yScroll = w.innerHeight + w.scrollMaxY;
-            } else if (d.body.scrollHeight > d.body.offsetHeight) { // all but Explorer Mac
+            } else if (d.body.scrollHeight > d.body.offsetHeight) {
                 xScroll = d.body.scrollWidth;
                 yScroll = d.body.scrollHeight;
-            } else if (doc && doc.scrollHeight > doc.offsetHeight) { // Explorer 6 strict mode
+            } else if (doc && doc.scrollHeight > doc.offsetHeight) {
                 xScroll = doc.scrollWidth;
                 yScroll = doc.scrollHeight;
-            } else { // Explorer Mac...would also work in Mozilla and Safari
+            } else {
                 xScroll = d.body.offsetWidth;
                 yScroll = d.body.offsetHeight;
             }
 
-            if (self.innerHeight) { // all except Explorer
+            if (self.innerHeight) {
                 windowWidth = self.innerWidth;
                 windowHeight = self.innerHeight;
-            } else if (doc && doc.clientHeight) { // Explorer 6 Strict Mode
+            } else if (doc && doc.clientHeight) {
                 windowWidth = doc.clientWidth;
                 windowHeight = doc.clientHeight;
-            } else if (d.body) { // other Explorers
+            } else if (d.body) {
                 windowWidth = d.body.clientWidth;
                 windowHeight = d.body.clientHeight;
             }
 
-            // for small pages with total height less then height of the viewport
             if (yScroll < windowHeight) {
                 pageHeight = windowHeight;
             } else {
                 pageHeight = yScroll;
             }
 
-            // for small pages with total width less then width of the viewport
             if (xScroll < windowWidth) {
                 pageWidth = windowWidth;
             } else {
