@@ -21,6 +21,25 @@ body {
     overflow-y: auto;
 }
 
+#window-styled-block {
+    position: relative;
+}
+
+.nav {
+    top: 50%;
+    color: #fff;
+    cursor: pointer;
+    position: absolute;
+}
+
+.next {
+    right: 10px;
+}
+
+.prev {
+    left: 10px;
+}
+
 .images {
     width: 600px;
     margin: 0 auto;
@@ -28,4 +47,9 @@ body {
 
 #popup-content {
     text-align: center;
+}
+
+.close {
+    float: right;
+    cursor: pointer;
 }

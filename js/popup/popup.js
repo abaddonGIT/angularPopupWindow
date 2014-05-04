@@ -11,6 +11,17 @@ var popup = angular.module("popupWindow", []);
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
         link: function (scope, elem, attr) {
+            //Создаем наборы из однотипных элементов
+            if (attr.group) {
+                var config = $popupWindow.config(), group = attr.group;
+                if (config.setElements[group]) {
+                    config.setElements[group].push(elem);
+                } else {
+                    config.setElements[group] = [];
+                    config.setElements[group].push(elem);
+                }
+            }
+
             elem.bind("click", function (e) {
                 e.preventDefault();
                 scope.$emit('window:open', elem, attr);
@@ -25,6 +36,7 @@ popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', function ($po
     return function (scope, elem, attr) {
         scope.inner = {};
         scope.wrap = {};
+        scope.navigation = {};
 
         var config = $popupWindow.config();
         $http.post(config.tpls.wrapTpl).success(function (template) {
@@ -40,7 +52,7 @@ popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', function ($po
  */
 popup.directive("popupHeader", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-        scope.header = {};
+        scope.header = {el: elem};
         var config = $popupWindow.config();
         $http.post(config.tpls.headerTpl).success(function (template) {
             elem.html(template);
@@ -55,7 +67,7 @@ popup.directive("popupHeader", ['$popupWindow', '$http', '$compile', function ($
  */
 popup.directive("popupContent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-        scope.content = {};
+        scope.content = {el: elem};
         var config = $popupWindow.config();
         $http.post(config.tpls.contentTpl).success(function (template) {
             elem.html(template);
@@ -70,7 +82,7 @@ popup.directive("popupContent", ['$popupWindow', '$http', '$compile', function (
  */
 popup.directive("popupFooter", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
-        scope.footer = {};
+        scope.footer = {el: elem};
         var config = $popupWindow.config();
         $http.post(config.tpls.footerTpl).success(function (template) {
             elem.html(template);
@@ -81,8 +93,20 @@ popup.directive("popupFooter", ['$popupWindow', '$http', '$compile', function ($
     };
 }]);
 
-popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval", function ($rootScope, $window, $document, $interval) {
-    var config = {}, win = null, scope = null, sizes = null;
+popup.directive("imageIncontent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
+    return function (scope, elem, attr) {
+        scope.$emit("window:imageContent", elem, attr);
+    };
+}]);
+
+popup.directive("htmlContent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
+    return function (scope, elem, attr) {
+        scope.$emit("window:htmlContent", elem, attr);
+    };
+}]);
+
+popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval", "$http", "$compile", function ($rootScope, $window, $document, $interval, $http, $compile) {
+    var config = {}, win = null, scope = null, sizes = null, elemAttr = null;
 
     var Window = function (settings) {
         if (!(this instanceof Window)) {
@@ -91,7 +115,6 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
 
         angular.extend(this, {
             root: $rootScope,
-            url: 1,
             resize: true,
             padding: 15,
             margin: 10,
@@ -105,18 +128,38 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 width: 640,
                 height: 480
             },
-            queue: []
+            ajax: {
+                method: 'post',
+                url: 'test.php',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'},
+                data: {}
+            },
+            queue: [],
+            setElements: {},
+            loadImages: {},
+            timestamp: Date.now()
         }, settings);
 
         /*
-         * Open window event
+         * Открывает окно
          */
         this.scope.$on('window:open', function (e, elem, attr) {
             scope = this.scope;
+            this.group = attr.group;
+            //текущий элемент в наборе
+            if (this.group) {
+                this.index = this.setElements[this.group].indexOf(elem);
+            }
+
+            if (attr.request) {
+                elemAttr = scope.$eval(attr.request);
+            } else {
+                elemAttr = {};
+            }
             //Проверяем не были ли переданы настройки непосредственно через элемент
             if (scope) {
-                if (attr.windowSettings) {
-                    var set = this.scope.$eval(attr.windowSettings);
+                if (attr.settings) {
+                    var set = this.scope.$eval(attr.settings);
                     angular.extend(config, this, set);
                 } else {
                     angular.extend(config, this);
@@ -128,18 +171,40 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 throw ("Вы не передали локальный scope в ф-ю инициализации!");
             }
         }.bind(this));
-
+        /*
+         * Пагинация
+         */
+        this.scope.$on("window:navigate", function (e, elem, act) {
+            switch (act) {
+                case 'next':
+                    this.index = this.index + 1;
+                    break;
+                case 'prev':
+                    this.index = this.index - 1;
+                    break;
+            }
+            this.el = elem;
+            elemAttr = this.scope.$eval(elem[0].getAttribute("data-request")) || {};
+            //сброс всех блоков на дефолт
+            this.defaultWindow();
+            //Новая картинка
+            this.loadContent();
+        }.bind(this));
         win = this;
     };
 
     Window.prototype = {
-        /*
-         * Building popup
-         */
-        buildWindow: function () {
+        bind: function (event, handler) {
+            var name = event + ":" + this.timestamp;
+            scope.$on(name, handler.bind(this));
+        },
+        trigger: function (event) {
+            arguments[0] = event + ":" + this.timestamp;
+            scope.$broadcast.apply(scope, arguments);
+        },
+        defaultWindow: function () {
             sizes = this.sizes = this.getTrueWindowSize();
             var inner = {
-                show: true,
                 padding: config.margin + 'px 0 ' + config.margin + 'px 0',
                 width: sizes.pageWidthScroll,
                 height: sizes.viewHeight
@@ -161,13 +226,28 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             var content = {
                 img: {}
             };
+            var navigation = {
+                prev: {
+                    show: false
+                },
+                next: {
+                    show: false
+                }
+            }
             var footer = {};
 
             angular.extend(scope.wrap, wrap);
             angular.extend(scope.inner, inner);
+            angular.extend(scope.navigation, navigation);
             angular.extend(scope.header, header);
             angular.extend(scope.content, content);
             angular.extend(scope.footer, footer);
+        },
+        /*
+         * Building popup
+         */
+        buildWindow: function () {
+            this.defaultWindow();
             //Как только все части окна подгруженны начинаем впихивать туда контент
             var loadTpl = $interval(function () {
                 if (scope.inner.tplLoad && scope.header.tplLoad && scope.content.tplLoad && scope.footer.tplLoad) {
@@ -175,7 +255,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                     this.loadContent();
                     //this.updateScope();
                 }
-            }.bind(this), 500);
+            }.bind(this), 100);
 
             //Ресайз окна
             $window.onresize = function () {
@@ -188,59 +268,112 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             scope.$apply(function () {
                 scope.inner.width = newWinWidth;
                 scope.inner.height = newWinHeight;
-
-                wrap = sizes.pageWidthScroll - config.outPadding * 2;
-                //Получаем новые размеры изображения
-                if (wrap < config.minSizes.width) {
-                    wrap = config.minSizes.width;
-                } else {
-                    if (wrap > config.maxSizes.width) {
-                        wrap = config.maxSizes.width;
-                    }
-                }
-                scope.wrap.width = wrap;
-                newSizes = this.getNewSize(this.currContent);
-                if (this.currContent.ratio < 1) {
-                    if (newSizes[0] <= config.minSizes.width) {
-                        scope.wrap.width = config.minSizes.width;
+                if (config.resize) {
+                    //Размер всплывающего окна
+                    wrap = sizes.pageWidthScroll - config.outPadding * 2;
+                    //Получаем новые размеры изображения
+                    if (wrap < config.minSizes.width) {
+                        wrap = config.minSizes.width;
                     } else {
-                        scope.wrap.width = newSizes[0];
+                        if (wrap > config.maxSizes.width) {
+                            wrap = config.maxSizes.width;
+                        }
                     }
-                } else {
-                    scope.wrap.width = newSizes[0];
-                }
-                scope.content.img.width = newSizes[0];
-                scope.content.img.height = newSizes[1];
-            }.bind(this));
+                    scope.wrap.width = wrap;
 
+                    //Размер изображения внутри окна
+                    if (!this.currContent.param.noResize) {
+                        newSizes = this.getNewSize(this.currContent);
+                        if (this.currContent.ratio < 1) {
+                            if (newSizes[0] <= config.minSizes.width) {
+                                scope.wrap.width = config.minSizes.width;
+                            } else {
+                                scope.wrap.width = newSizes[0];
+                            }
+                        } else {
+                            scope.wrap.width = newSizes[0];
+                        }
+                        scope.content.img.width = newSizes[0];
+                        scope.content.img.height = newSizes[1];
+                    }
+                }
+            }.bind(this));
         },
         loadContent: function () {
-            var item = null;
             switch (config.winType) {
                 case 'image':
-                    item = new Item();
-                    this.root.$on("window:contentLoaded", function (e, item) {
-                        if (!item.error) {
-                            this.queue.push(item);
-                            angular.extend(scope.content.img, item);
-                            if (item.ratio < 1) {
-                                if (item.width <= config.minSizes.width) {
-                                    scope.wrap.width = config.minSizes.width;
-                                } else {
-                                    scope.wrap.width = item.width;
-                                }
-                            } else {
-                                scope.wrap.width = item.width;
-                            }
-                            this.currContent = item;
-                            this.updateScope();
-                        }
-                    }.bind(this));
+                    var item = new Item();
                     break;
-                case 'ajax':
-                    console.log('Подгрузка через ajax');
+                case 'ajax'://подгрузка контента через ajax
+                    angular.extend(config.ajax.data, elemAttr, this.data);
+                    config.ajax.transformRequest = function (data) {
+                        return this.toParam(data);
+                    }.bind(this);
+                    $http(config.ajax).success(function (data, status) {
+                            if (data instanceof Object) {//если вернули json
+                                var item = new Item(data, 'json');
+                            } else {
+                                var content = scope.content.el;
+                                content.html(data);
+                                $compile(content.contents())(scope);
+                            }
+                        }.bind(this)).error(function (data, status) {
+                        throw ("При попытке получения данных произошел сбой!");
+                    });
+                    //картинка, которая была внутри полученного контента загружена
+                    this.root.$on("window:imageContent", function (e, img, attr) {
+                        var item = new Item(img, 'image');
+                    }.bind(this));
+                    //просто html контент загружен
+                    this.root.$on("window:htmlContent", function (e, elem, attr) {
+                        var item = new Item(elem, 'html');
+                    });
                     break;
             }
+            //После разбора и создания объекта отображения, который включает в себя изображение
+            this.root.$on("window:imageLoaded", function (e, item) {
+                if (!item.error) {
+                    this.queue.push(item);
+                    //данные по картинке
+                    angular.extend(scope.content.img, item);
+                    //доп данные
+                    angular.extend(scope.content, item.param);
+
+                    if (item.ratio < 1) {
+                        if (item.width <= config.minSizes.width) {
+                            scope.wrap.width = config.minSizes.width;
+                        } else {
+                            scope.wrap.width = item.width;
+                        }
+                    } else {
+                        scope.wrap.width = item.width;
+                    }
+                    this.currContent = item;
+                    scope.inner.show = true;
+                    //навигация
+                    if (this.group) {
+                        if (this.index === 0) {//Первый
+                            scope.navigation.next.show = true;
+                            scope.navigation.prev.show = false;
+                        } else if (this.index === (this.setElements[this.group].length - 1)) {//последний
+                            scope.navigation.next.show = false;
+                            scope.navigation.prev.show = true;
+                        } else {
+                            scope.navigation.next.show = true;
+                            scope.navigation.prev.show = true;
+                        }
+                    }
+                    this.updateScope();
+                }
+            }.bind(this));
+            //После создания объекта отображения, который представляет из себя просто кусок html-кода
+            this.root.$on("window:htmlLoaded", function (e, item) {
+                //доп данные
+                angular.extend(scope.content, item.param);
+                this.currContent = item;
+                scope.inner.show = true;
+                this.updateScope();
+            }.bind(this));
         },
         updateScope: function () {
             this.root.$$phase || this.root.$digest();
@@ -328,38 +461,111 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 result[1] = desiredHeight;
             }
             return result;
-        }
+        },
+        toParam: function (data) {
+            if (data) {
+                var string = '';
+                angular.forEach(data, function (val, key) {
+                    string += key + '=' + val + '&';
+                });
+                string = string.substr(0, string.length - 1);
+                return string;
+            }
+        },
+        //закрывает окно
+        closeWindow: function () {
+            scope.inner.show = false;
+        },
+        //вперед
+        getNext: function () {
+            var next = this.setElements[this.group][this.index + 1];
+            scope.$emit("window:navigate", next, 'next');
+        },
+        //Назад
+        getPrev: function () {
+            var prev = this.setElements[this.group][this.index - 1];
+            scope.$emit("window:navigate", prev, 'prev');
+        },
+        data: {}
     };
 
-    var Item = function () {
+    var Item = function (obj, type) {
         switch (config.winType) {
             case 'image':
                 var link = win.el[0].href;
                 if (!link) {
                     throw ("Вы не заполнили атребут href у источника!");
                 } else {
-                    var img = new Image();
-                    img.onload = function () {
-                        this.oric_width = img.width;
-                        this.oric_height = img.height;
-                        this.src = link;
-                        this.el = img;
-                        this.ratio = this.oric_width / this.oric_height;
-                        var newSizes = win.getNewSize(this);
-                        this.width = newSizes[0];
-                        this.height = newSizes[1];
-                        win.root.$broadcast("window:contentLoaded", this);
-                        img = 0;
-                    }.bind(this);
-                    img.onerror = function () {
-                        this.error = true;
-                        this.el = img;
-                        win.root.$broadcast("window:contentLoaded", this);
-                        img = 0;
-                    }.bind(this);
-                    img.src = link;
+                    this.createImage(link);
                 }
                 break;
+            case 'ajax':
+                switch (type) {
+                    case 'image':
+                        var link = obj[0].src;
+                        if (!link) {
+                            throw ("Вы не заполнили атребут src у источника!");
+                        } else {
+                            this.createImage(link);
+                        }
+                        break;
+                    case 'html'://Это обычный html контент не предпологает элементов с изменяемыми размерами
+                        this.createHtml(obj);
+                        break;
+                    case 'json'://контент из json строки
+                        if (obj.params) {
+                            angular.extend(elemAttr, obj.params);
+                        }
+                        //проверка передана ли картинка
+                        if (obj.src) {
+                            this.createImage(obj.src);
+                        }
+                        break;
+                }
+                break;
+        }
+    };
+
+    Item.prototype = {
+        imageRendering: function (img, link) {
+            this.oric_width = img.width;
+            this.oric_height = img.height;
+            this.src = link;
+            this.el = img;
+            this.ratio = this.oric_width / this.oric_height;
+            var newSizes = win.getNewSize(this);
+            this.width = newSizes[0];
+            this.height = newSizes[1];
+            this.param = {};
+            angular.extend(this.param, elemAttr);
+        },
+        createImage: function (link) {
+            if (win.loadImages[link]) {
+                this.imageRendering(win.loadImages[link], link);
+                win.root.$broadcast("window:imageLoaded", this);
+            } else {
+                var img = new Image();
+                img.onload = function () {
+                    this.imageRendering(img, link);
+                    win.root.$broadcast("window:imageLoaded", this);
+                    win.loadImages[link] = img;
+                    img = 0;
+                }.bind(this);
+                img.onerror = function () {
+                    this.error = true;
+                    this.el = img;
+                    win.root.$broadcast("window:imageLoaded", this);
+                    img = 0;
+                }.bind(this);
+                img.src = link;
+            }
+        },
+        createHtml: function (obj) {
+            this.param = {};
+            this.el = obj;
+            elemAttr.noResize = true;
+            angular.extend(this.param, elemAttr);
+            win.root.$broadcast("window:htmlLoaded", this);
         }
     };
 
@@ -369,6 +575,9 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
         },
         config: function () {
             return win;
-        }
+        },
+        closeWindow: this.closeWindow,
+        getNext: this.getNext,
+        getPrev: this.getPrev
     }
 }]);
