@@ -14,7 +14,7 @@
         <div>
             <a style="cursor: pointer; display: block; margin: 5px 0;" ng-repeat="image in images" data-popup-window data-settings="{winType:'ajax'}" data-request="{id: '{{image.id}}'}" data-group="free">{{image.title}}</a>
         </div>
-        <a href="img/01.jpg" data-group="two" data-popup-window data-request="{title: 'Первая картинка'}">
+        <a href="img/01.jpg" data-group="two" data-popup-window data-request="{title: 'Первая картинка', type: 'html', href: 'img/01.jpg'}" data-settings="{winType:'ajax'}">
             <img src="img/02.jpg" alt="" width="200" />
         </a>
 

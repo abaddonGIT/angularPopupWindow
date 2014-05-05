@@ -30,6 +30,7 @@ body {
     color: #999;
     cursor: pointer;
     position: absolute;
+    z-index: 3;
 }
 
 .next {
@@ -47,6 +48,17 @@ body {
 
 #popup-content {
     text-align: center;
+    position: relative;
+}
+
+.win-preloader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0, 0.5);
+    z-index: 5;
 }
 
 .close {

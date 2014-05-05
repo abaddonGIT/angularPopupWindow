@@ -1,3 +1,5 @@
 <div id="popup-content">
     <img src="{{content.img.src}}" alt="" width="{{content.img.width}}" height="{{content.img.height}}"/>
+    <h2 style="color: red;" ng-show="winError">{{winError}}</h2>
+    <div class="win-preloader" ng-show="navigation.preloader"></div>
 </div>
