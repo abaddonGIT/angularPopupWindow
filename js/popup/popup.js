@@ -13,6 +13,12 @@ popup.factory("templateCache", ["$cacheFactory", function ($cacheFactory) {
 popup.value("errorsString", {
     noimage: "Битый адрес картинки"
 });
+popup.value("windowSectors", {
+    inner: {el: null, loaded: false},
+    header: {el: null, loaded: false},
+    content: {el: null, loaded: false},
+    footer: {el: null, loaded: false}
+});
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
         link: function (scope, elem, attr) {
@@ -37,33 +43,33 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
 /*
  * Подгрузка компонентов шаблона
  */
-popup.directive("popupSection", ['$popupWindow', '$http', '$compile', 'templateCache', function ($popupWindow, $http, $compile, templateCache) {
+popup.directive("popupSection", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
     return function (scope, elem, attr) {
         var sector = attr.popupSection, config = $popupWindow.config();
         switch (sector) {
             case 'header':
-                scope.header = {el: elem};
+                windowSectors.header.el = elem;
                 var temp = templateCache.get(config.tpls.headerTpl), tpl = config.tpls.headerTpl;
                 break;
             case 'content':
-                scope.content = {el: elem};
+                windowSectors.content.el = elem;
                 var temp = templateCache.get(config.tpls.contentTpl), tpl = config.tpls.contentTpl;
                 break;
             case 'footer':
-                scope.footer = {el: elem};
+                windowSectors.footer.el = elem;
                 var temp = templateCache.get(config.tpls.footerTpl), tpl = config.tpls.footerTpl;
                 break;
         }
 
         if (temp) {
             $compile(temp)(scope);
-            scope[sector].tplLoad = true;
+            windowSectors[sector].loaded = true;
         } else {
             $http.post(tpl).success(function (template) {
                 elem.html(template);
                 var content = elem.contents();
                 $compile(content)(scope);
-                scope[sector].tplLoad = true;
+                windowSectors[sector].loaded = true;
                 templateCache.put(tpl, content);
             });
         }
@@ -72,22 +78,18 @@ popup.directive("popupSection", ['$popupWindow', '$http', '$compile', 'templateC
 /*
  * Основной шаблон
  */
-popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', function ($popupWindow, $http, $compile, templateCache) {
+popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
     return function (scope, elem, attr) {
-        scope.inner = {};
-        scope.wrap = {};
-        scope.navigation = {};
-
         var config = $popupWindow.config(), temp = templateCache.get(config.tpls.wrapTpl);
         if (temp) {
             $compile(temp)(scope);
-            scope.inner.tplLoad = true;
+            windowSectors.inner.loaded = true;
         } else {
             $http.post(config.tpls.wrapTpl).success(function (template) {
                 elem.html(template);
                 var content = elem.contents();
                 $compile(content)(scope);
-                scope.inner.tplLoad = true;
+                windowSectors.inner.loaded = true;
                 templateCache.put(config.tpls.wrapTpl, content);
             });
         }
@@ -109,7 +111,7 @@ popup.directive("htmlContent", ['$popupWindow', '$http', '$compile', function ($
     };
 }]);
 
-popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval", "$http", "$compile", "errorsString", function ($rootScope, $window, $document, $interval, $http, $compile, errorsString) {
+popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval", "$http", "$compile", "errorsString", "windowSectors", function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors) {
     var config = {}, win = null, scope = null, sizes = null, elemAttr = null;
 
     var Window = function (settings) {
@@ -153,7 +155,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
         $window.onresize = function () {
             //сброс установленной высоты для её динамического расчета
             this.currWrapWidth = null;
-            this.windowResize();
+            this._windowResize();
         }.bind(this);
 
         win = this;
@@ -183,10 +185,60 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 }
                 this.el = elem;
                 //Строим окно
-                this.buildWindow();
+                this._buildWindow();
             } else {
                 throw ("Вы не передали локальный scope в ф-ю инициализации!");
             }
+        },
+        _buildWindow: function () {
+            this._defaultWindow();
+            //Как только все части окна подгруженны начинаем впихивать туда контент
+            if (!this.allSectorsLoaded) {
+                var loadTpl = $interval(function () {
+                    if (windowSectors.inner.loaded && windowSectors.header.loaded && windowSectors.content.loaded && windowSectors.footer.loaded) {
+                        $interval.cancel(loadTpl);
+                        this.allSectorsLoaded = true;
+                        this._loadContent();
+                    }
+                }.bind(this), 100);
+            } else {
+                this._loadContent();
+            }
+        },
+        _defaultWindow: function () {
+            sizes = this.sizes = this.getTrueWindowSize();
+            var inner = {
+                padding: config.margin + 'px 0 ' + config.margin + 'px 0',
+                width: sizes.pageWidthScroll,
+                height: sizes.viewHeight
+            };
+            //Размер внешнего блока
+            var wrap = {
+                padding: config.padding,
+                width: this.getWrapWidth()
+            };
+            var header = {};
+            var content = {
+                img: {},
+                param: {}
+            };
+            var navigation = {
+                prev: {
+                    show: false
+                },
+                next: {
+                    show: false
+                },
+                preloader: false
+            }
+            var footer = {};
+
+            scope.wrap = wrap;
+            scope.inner = inner;
+            scope.navigation = navigation;
+            scope.header = header;
+            scope.content = content;
+            scope.footer = footer;
         },
         _windowPagination: function (e, elem, act) {
             switch (act) {
@@ -204,7 +256,39 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             //Показываем прелодер при пагинации
             scope.navigation.preloader = true;
             //Новая картинка
-            this.loadContent();
+            this._loadContent();
+        },
+        _loadContent: function () {
+            switch (config.winType) {
+                case 'image':
+                    this.currContent = new Item();
+                    break;
+                case 'ajax'://подгрузка контента через ajax
+                    config.ajax.data = angular.extend(elemAttr, this.data);
+                    config.ajax.transformRequest = function (data) {
+                        return this.toParam(data);
+                    }.bind(this);
+                    $http(config.ajax).success(function (data, status) {
+                            if (data instanceof Object) {//если вернули json
+                                this.currContent = new Item(data, 'json');
+                            } else {
+                                var content = windowSectors.content.el;
+                                content.html(data);
+                                $compile(content.contents())(scope);
+                            }
+                        }.bind(this)).error(function (data, status) {
+                        throw ("При попытке получения данных произошел сбой!");
+                    });
+                    //картинка, которая была внутри полученного контента загружена
+                    this.root.$on("window:imageContent", function (e, img, attr) {
+                        this.currContent = new Item(img, 'image');
+                    }.bind(this));
+                    //просто html контент загружен
+                    this.root.$on("window:htmlContent", function (e, elem, attr) {
+                        this.currContent = new Item(elem, 'html');
+                    });
+                    break;
+            }
         },
         _windowImageLoaded: function (e, item) {
             //убираем прелодер
@@ -224,6 +308,8 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 //Все параметры
                 angular.extend(scope.content.param, param);
 
+                console.log(scope.content.img.src);
+
                 if (item.img.ratio < 1) {
                     if (item.img.width <= config.minSizes.width) {
                         scope.wrap.width = config.minSizes.width;
@@ -233,7 +319,6 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 } else {
                     scope.wrap.width = item.img.width;
                 }
-                this.currContent = item;
                 //навигация
                 if (this.group) {
                     if (this.index === 0) {//Первый
@@ -269,11 +354,11 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             scope.inner.show = true;
             this.updateScope();
         },
-        bind: function (event, handler) {
+        _bind: function (event, handler) {
             var name = event + ":" + this.timestamp;
             scope.$on(name, handler.bind(this));
         },
-        trigger: function (event) {
+        _trigger: function (event) {
             arguments[0] = event + ":" + this.timestamp;
             scope.$broadcast.apply(scope, arguments);
         },
@@ -289,57 +374,8 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             }
             return wrap;
         },
-        defaultWindow: function () {
-            sizes = this.sizes = this.getTrueWindowSize();
-            var inner = {
-                padding: config.margin + 'px 0 ' + config.margin + 'px 0',
-                width: sizes.pageWidthScroll,
-                height: sizes.viewHeight
-            };
-            //Размер внешнего блока
-            var wrap = {
-                padding: config.padding,
-                width: this.getWrapWidth()
-            };
-            var header = {};
-            var content = {
-                img: {},
-                param: {}
-            };
-            var navigation = {
-                prev: {
-                    show: false
-                },
-                next: {
-                    show: false
-                },
-                preloader: false
-            }
-            var footer = {};
-
-            angular.extend(scope.wrap, wrap);
-            angular.extend(scope.inner, inner);
-            angular.extend(scope.navigation, navigation);
-            angular.extend(scope.header, header);
-            angular.extend(scope.content, content);
-            angular.extend(scope.footer, footer);
-        },
-        /*
-         * Building popup
-         */
-        buildWindow: function () {
-            this.defaultWindow();
-            //Как только все части окна подгруженны начинаем впихивать туда контент
-            var loadTpl = $interval(function () {
-                if (scope.inner.tplLoad && scope.header.tplLoad && scope.content.tplLoad && scope.footer.tplLoad) {
-                    $interval.cancel(loadTpl);
-                    this.loadContent();
-                    //this.updateScope();
-                }
-            }.bind(this), 100);
-        },
         //Пересчет размеров окна
-        windowResize: function () {
+        _windowResize: function () {
             sizes = this.getTrueWindowSize(), newWinWidth = sizes.pageWidthScroll, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
             scope.$apply(function () {
                 scope.inner.width = newWinWidth;
@@ -352,7 +388,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                     //Размер изображения внутри окна
                     if (!this.currContent.param.noResize) {
                         newSizes = this.getNewSize(this.currContent);
-                        if (this.currContent.ratio < 1) {
+                        if (this.currContent.img.ratio < 1) {
                             if (newSizes[0] <= config.minSizes.width) {
                                 scope.wrap.width = config.minSizes.width;
                             } else {
@@ -366,38 +402,6 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                     }
                 }
             }.bind(this));
-        },
-        loadContent: function () {
-            switch (config.winType) {
-                case 'image':
-                    var item = new Item();
-                    break;
-                case 'ajax'://подгрузка контента через ajax
-                    angular.extend(config.ajax.data, elemAttr, this.data);
-                    config.ajax.transformRequest = function (data) {
-                        return this.toParam(data);
-                    }.bind(this);
-                    $http(config.ajax).success(function (data, status) {
-                            if (data instanceof Object) {//если вернули json
-                                var item = new Item(data, 'json');
-                            } else {
-                                var content = scope.content.el;
-                                content.html(data);
-                                $compile(content.contents())(scope);
-                            }
-                        }.bind(this)).error(function (data, status) {
-                        throw ("При попытке получения данных произошел сбой!");
-                    });
-                    //картинка, которая была внутри полученного контента загружена
-                    this.root.$on("window:imageContent", function (e, img, attr) {
-                        var item = new Item(img, 'image');
-                    }.bind(this));
-                    //просто html контент загружен
-                    this.root.$on("window:htmlContent", function (e, elem, attr) {
-                        var item = new Item(elem, 'html');
-                    });
-                    break;
-            }
         },
         updateScope: function () {
             this.root.$$phase || this.root.$digest();
@@ -498,7 +502,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
         closeWindow: function () {
             scope.inner.show = false;
             this.currWrapWidth = null;
-            this.defaultWindow();
+            this._defaultWindow();
             this.updateScope();
         },
         //вперед
