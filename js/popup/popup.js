@@ -240,7 +240,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             scope.content = content;
             scope.footer = footer;
         },
-        _windowPagination: function (e, elem, act) {
+        _windowPagination: function (e, elem, act, param) {
             switch (act) {
                 case 'next':
                     this.index = this.index + 1;
@@ -251,6 +251,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             }
             this.el = elem;
             elemAttr = this.scope.$eval(elem[0].getAttribute("data-request")) || {};
+            angular.extend(elemAttr, param);
             //Вычисляем реальные размеры для окна. но не применяем их дабы не было эффекта дергания
             this.currWrapWidth = this.getWrapWidth();
             //Показываем прелодер при пагинации
@@ -498,22 +499,30 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 return string;
             }
         },
-        //закрывает окно
+        /*
+         * Закрывает текущее окно
+         */
         closeWindow: function () {
             scope.inner.show = false;
             this.currWrapWidth = null;
             this._defaultWindow();
             this.updateScope();
         },
-        //вперед
-        getNext: function () {
+        /*
+        * Получить следующий элемент в наборе
+        * @param {Object} - объект с параметрами, которые будут прицеплены к запросу
+         */
+        getNext: function (param) {
             var next = this.setElements[this.group][this.index + 1];
-            scope.$emit("window:navigate", next, 'next');
+            scope.$emit("window:navigate", next, 'next', param || {});
         },
-        //Назад
-        getPrev: function () {
+        /*
+         * Получить предыдущий элемент в наборе
+         * @param {Object} - объект с параметрами, которые будут прицеплены к запросу
+         */
+        getPrev: function (param) {
             var prev = this.setElements[this.group][this.index - 1];
-            scope.$emit("window:navigate", prev, 'prev');
+            scope.$emit("window:navigate", prev, 'prev', param || {});
         },
         data: {
         }

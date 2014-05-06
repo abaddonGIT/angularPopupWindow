@@ -65,14 +65,14 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
    $scope.close = function () {
        window.closeWindow();
    };
-
+   //Вперед
    $scope.next = function () {
        window.getNext();
    };
-
-    $scope.prev = function () {
-        window.getPrev();
-    }
+   //Назад
+   $scope.prev = function () {
+       window.getPrev();
+   }
 
 } ]);
 
