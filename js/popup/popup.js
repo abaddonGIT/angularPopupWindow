@@ -15,9 +15,9 @@ popup.value("errorsString", {
 });
 popup.value("windowSectors", {
     inner: {el: null, loaded: false},
-    header: {el: null, loaded: false},
-    content: {el: null, loaded: false},
-    footer: {el: null, loaded: false}
+    header: {el: null},
+    content: {el: null},
+    footer: {el: null}
 });
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
@@ -43,36 +43,21 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
 /*
  * Подгрузка компонентов шаблона
  */
-popup.directive("popupSection", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
+popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($popupWindow, windowSectors) {
     return function (scope, elem, attr) {
-        var sector = attr.popupSection, config = $popupWindow.config();
+        var sector = attr.windowSection, config = $popupWindow.config();
         switch (sector) {
             case 'header':
                 windowSectors.header.el = elem;
-                var temp = templateCache.get(config.tpls.headerTpl), tpl = config.tpls.headerTpl;
                 break;
             case 'content':
                 windowSectors.content.el = elem;
-                var temp = templateCache.get(config.tpls.contentTpl), tpl = config.tpls.contentTpl;
                 break;
             case 'footer':
                 windowSectors.footer.el = elem;
-                var temp = templateCache.get(config.tpls.footerTpl), tpl = config.tpls.footerTpl;
                 break;
         }
-
-        if (temp) {
-            $compile(temp)(scope);
-            windowSectors[sector].loaded = true;
-        } else {
-            $http.post(tpl).success(function (template) {
-                elem.html(template);
-                var content = elem.contents();
-                $compile(content)(scope);
-                windowSectors[sector].loaded = true;
-                templateCache.put(tpl, content);
-            });
-        }
+        ;
     };
 }]);
 /*
@@ -80,17 +65,17 @@ popup.directive("popupSection", ['$popupWindow', '$http', '$compile', 'templateC
  */
 popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
     return function (scope, elem, attr) {
-        var config = $popupWindow.config(), temp = templateCache.get(config.tpls.wrapTpl);
+        var config = $popupWindow.config(), temp = templateCache.get(config.wrapTpl);
         if (temp) {
             $compile(temp)(scope);
             windowSectors.inner.loaded = true;
         } else {
-            $http.post(config.tpls.wrapTpl).success(function (template) {
+            $http.post(config.wrapTpl).success(function (template) {
                 elem.html(template);
                 var content = elem.contents();
                 $compile(content)(scope);
                 windowSectors.inner.loaded = true;
-                templateCache.put(config.tpls.wrapTpl, content);
+                templateCache.put(config.wrapTpl, content);
             });
         }
     };
@@ -195,7 +180,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             //Как только все части окна подгруженны начинаем впихивать туда контент
             if (!this.allSectorsLoaded) {
                 var loadTpl = $interval(function () {
-                    if (windowSectors.inner.loaded && windowSectors.header.loaded && windowSectors.content.loaded && windowSectors.footer.loaded) {
+                    if (windowSectors.inner.loaded) {
                         $interval.cancel(loadTpl);
                         this.allSectorsLoaded = true;
                         this._loadContent();
@@ -499,21 +484,25 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
             }
         },
         //закрывает окно
-        closeWindow: function () {
+        closeWindow: function (userProcessing) {
             scope.inner.show = false;
             this.currWrapWidth = null;
             this._defaultWindow();
             this.updateScope();
         },
         //вперед
-        getNext: function () {
+        getNext: function (userProcessing) {
             var next = this.setElements[this.group][this.index + 1];
             scope.$emit("window:navigate", next, 'next');
         },
         //Назад
-        getPrev: function () {
-            var prev = this.setElements[this.group][this.index - 1];
-            scope.$emit("window:navigate", prev, 'prev');
+        getPrev: function (userProcessing) {
+            if (angular.isFunction(userProcessing)) {
+                userProcessing(windowSectors);
+            } else {
+                var prev = this.setElements[this.group][this.index - 1];
+                scope.$emit("window:navigate", prev, 'prev');
+            }
         },
         data: {
         }
@@ -608,11 +597,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
         },
         config: function () {
             return win;
-        },
-        closeWindow: this.closeWindow,
-        getNext: this.getNext,
-        getPrev: this.getPrev,
-        winTrueSize: this.getTrueWindowSize
+        }
     }
 }])
 ;

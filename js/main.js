@@ -53,12 +53,7 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
    ];
 
    var window = $scope.popup =  $popupWindow.init({
-       tpls: {
-           wrapTpl: 'tpl/wrapTpl.html',
-           headerTpl: 'tpl/windowHeaderTpl.html',
-           contentTpl: 'tpl/windowContentTpl.html',
-           footerTpl: 'tpl/windowFooterTpl.html'
-       },
+       wrapTpl: 'tpl/wrapTpl.html',
        scope: $scope
    });
    //закрывает окно
@@ -71,7 +66,9 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
    };
 
     $scope.prev = function () {
-        window.getPrev();
+        window.getPrev(function (sectors) {
+            console.log(sectors);
+        });
     }
 
 } ]);

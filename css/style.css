@@ -51,6 +51,10 @@ body {
     position: relative;
 }
 
+#content {
+    text-align: center;
+}
+
 .win-preloader {
     position: absolute;
     top: 0;

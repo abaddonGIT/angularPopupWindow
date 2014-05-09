@@ -2,9 +2,21 @@
     <div id="wrap-inner" ng-style="{width:inner.width + 'px', height:inner.height + 'px', padding:inner.padding}">
         <div id="wrap-block" ng-style="{width:wrap.width + 'px', padding:wrap.padding + 'px'}">
             <div id="window-styled-block">
-                <div data-popup-section="header"></div>
-                <div data-popup-section="content"></div>
-                <div data-popup-section="footer"></div>
+                <div id="window-header" data-window-section="header">
+                    <b>{{header.title || content.param.title}}</b>
+                    <a ng-click="close()" class="close">Закрыть</a>
+                    <a ng-click="prev()" class="prev nav" ng-show="navigation.prev.show">Назад</a>
+                    <a ng-click="next()" class="next nav" ng-show="navigation.next.show">Вперед</a>
+                </div>
+                <div id="content" data-window-section="content">
+                    <img src="{{content.img.src}}" alt="" width="{{content.img.width}}"
+                         height="{{content.img.height}}"/>
+                </div>
+
+                <div id="window-footer" data-window-section="footer">
+                    {{footer.description}}
+                    <h3>Номер: {{content.id}}</h3>
+                </div>
             </div>
         </div>
     </div>
