@@ -64,12 +64,19 @@ app.controller("baseController", ['$scope','$document','$popupWindow', function 
    $scope.next = function () {
        window.getNext();
    };
-   //Назад
-   $scope.prev = function () {
+<<<<<<< HEAD
+
+    $scope.prev = function () {
         window.getPrev(function (sectors) {
             console.log(sectors);
         });
+    }
+=======
+   //Назад
+   $scope.prev = function () {
+       window.getPrev();
    }
+>>>>>>> 3c4250bd5b598fc0ad576e212b29a840572abc7e
 
 } ]);
 

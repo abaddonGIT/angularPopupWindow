@@ -484,23 +484,43 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
                 return string;
             }
         },
+<<<<<<< HEAD
+        //закрывает окно
+        closeWindow: function (userProcessing) {
+=======
         /*
          * Закрывает текущее окно
          */
         closeWindow: function () {
+>>>>>>> 3c4250bd5b598fc0ad576e212b29a840572abc7e
             scope.inner.show = false;
             this.currWrapWidth = null;
             this._defaultWindow();
             this.updateScope();
         },
+<<<<<<< HEAD
+        //вперед
+        getNext: function (userProcessing) {
+=======
         /*
         * Получить следующий элемент в наборе
         * @param {Object} - объект с параметрами, которые будут прицеплены к запросу
          */
         getNext: function (param) {
+>>>>>>> 3c4250bd5b598fc0ad576e212b29a840572abc7e
             var next = this.setElements[this.group][this.index + 1];
             scope.$emit("window:navigate", next, 'next', param || {});
         },
+<<<<<<< HEAD
+        //Назад
+        getPrev: function (userProcessing) {
+            if (angular.isFunction(userProcessing)) {
+                userProcessing(windowSectors);
+            } else {
+                var prev = this.setElements[this.group][this.index - 1];
+                scope.$emit("window:navigate", prev, 'prev');
+            }
+=======
         /*
          * Получить предыдущий элемент в наборе
          * @param {Object} - объект с параметрами, которые будут прицеплены к запросу
@@ -508,7 +528,7 @@ popup.factory("$popupWindow", ["$rootScope", "$window", "$document", "$interval"
         getPrev: function (param) {
             var prev = this.setElements[this.group][this.index - 1];
             scope.$emit("window:navigate", prev, 'prev', param || {});
-            }
+>>>>>>> 3c4250bd5b598fc0ad576e212b29a840572abc7e
         },
         data: {
         }
