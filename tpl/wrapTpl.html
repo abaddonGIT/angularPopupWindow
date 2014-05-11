@@ -1,6 +1,6 @@
 <div id="window-wrap" ng-show="inner.show">
     <div id="wrap-inner" ng-style="{width:inner.width + 'px', height:inner.height + 'px', padding:inner.padding}">
-        <div id="wrap-block" ng-style="{width:wrap.width + 'px', padding:wrap.padding + 'px'}">
+        <div id="wrap-block" data-window-section="wrap" ng-style="{width:wrap.width + 'px', padding:wrap.padding + 'px'}">
             <div id="window-styled-block">
                 <div id="window-header" data-window-section="header">
                     <b>{{header.title || content.param.title}}</b>
