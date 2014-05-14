@@ -176,7 +176,7 @@ popup.factory("$popupWindow", [
                 unicid: null,
                 currContent: null,
                 loadImages: {},
-                pushState: true,
+                pushState: false,
                 body: $document[0].querySelector("body")
             });
 
