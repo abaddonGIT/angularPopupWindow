@@ -64,6 +64,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
         }
     ];
 
+
     var window = $scope.popup = $popupWindow.init({
         wrapTpl: 'tpl/wrapTpl.html',
         scope: $scope

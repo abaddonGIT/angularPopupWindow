@@ -23,18 +23,25 @@ popup.value("windowSectors", {
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
         link: function (scope, elem, attr) {
-            //Создаем наборы из однотипных элементов
-            if (attr.group) {
-                var unicid = $popupWindow.unicid();
-                elem[0].setAttribute("unicid", unicid);
-                var win = $popupWindow.config(), group = attr.group;
-                if (win.setElements[group]) {
-                    win.setElements[group].push({unicid: unicid, el: elem});
-                } else {
-                    win.setElements[group] = [];
-                    win.setElements[group].push({unicid: unicid, el: elem});
+            var stop = scope.$watch('windowStart', function (value) {
+                if (value) {
+                    var group = attr.group;
+                    //Создаем наборы из однотипных элементов
+                    var unicid = $popupWindow.unicid();
+                    elem[0].setAttribute("unicid", unicid);
+                    value.allElements.push({unicid: unicid, el: elem});
+
+                    if (attr.group) {
+                        if (value.setElements[group]) {
+                            value.setElements[group].push({unicid: unicid, el: elem});
+                        } else {
+                            value.setElements[group] = [];
+                            value.setElements[group].push({unicid: unicid, el: elem});
+                        }
+                    }
+                    stop();
                 }
-            }
+            });
         }
     };
 }]);
@@ -43,7 +50,7 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
  */
 popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($popupWindow, windowSectors) {
     return function (scope, elem, attr) {
-        var sector = attr.windowSection, config = $popupWindow.config();
+        var sector = attr.windowSection;
         switch (sector) {
             case 'header':
                 windowSectors.header.el = elem;
@@ -66,20 +73,25 @@ popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($po
  */
 popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
     return function (scope, elem, attr) {
-        var win = $popupWindow.config(), temp = templateCache.get(win.config.wrapTpl);
-        windowSectors.inner.el = elem;
-        if (temp) {
-            $compile(temp)(scope);
-            windowSectors.inner.loaded = true;
-        } else {
-            $http.post(win.config.wrapTpl).success(function (template) {
-                elem.html(template);
-                var content = elem.contents();
-                $compile(content)(scope);
-                windowSectors.inner.loaded = true;
-                templateCache.put(win.config.wrapTpl, content);
-            });
-        }
+        var stop = scope.$watch('loadWindowTemp', function (value) {
+            if (value) {
+                var temp = templateCache.get(value.config.wrapTpl);
+                windowSectors.inner.el = elem;
+                if (temp) {
+                    $compile(temp)(scope);
+                    windowSectors.inner.loaded = true;
+                } else {
+                    $http.post(value.config.wrapTpl).success(function (template) {
+                        elem.html(template);
+                        var content = elem.contents();
+                        $compile(content)(scope);
+                        windowSectors.inner.loaded = true;
+                        templateCache.put(value.config.wrapTpl, content);
+                    });
+                }
+                stop();
+            }
+        });
     };
 }]);
 /*
@@ -97,6 +109,35 @@ popup.directive("htmlContent", ['$popupWindow', '$http', '$compile', function ($
         scope.$emit("window:htmlContent", elem, attr);
     };
 }]);
+/*
+ * Сохранение данных в localStorage
+ */
+popup.factory("$winStorage", ["$window", "$location", function ($window, $location) {
+    //Сохраняет объект в хранилище
+    var setItem = function (item) {
+        var config = JSON.stringify(item.openConfig);
+        localStorage.setItem(item.win_id, config);
+    };
+    //Достает из хранилища
+    var getItem = function () {
+        var searchString = $location.search();
+        if (searchString['win_id']) {
+            return JSON.parse(localStorage[searchString['win_id']]);
+        } else {
+            return false;
+        }
+    };
+
+    var clear = function () {
+        localStorage.clear();
+    };
+
+    return {
+        set: setItem,
+        get: getItem,
+        clear: clear
+    };
+}]);
 
 popup.factory("$popupWindow", [
     "$rootScope",
@@ -109,7 +150,9 @@ popup.factory("$popupWindow", [
     "windowSectors",
     "$timeout",
     "$location",
-    function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location) {
+    "$winStorage",
+    function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location, $winStorage) {
+        console.log($winStorage);
         var win, scope, sizes, elemAttr, def, config;
 
         var Window = function (settings) {
@@ -124,6 +167,7 @@ popup.factory("$popupWindow", [
                 root: $rootScope,
                 scope: settings.scope,
                 setElements: {},
+                allElements: [],
                 queue: [],
                 timestamp: Date.now(),
                 el: null,
@@ -180,8 +224,24 @@ popup.factory("$popupWindow", [
                 this._windowResize();
             }.bind(this);
 
-            //при загрузке проверяем
+            scope.windowStart = this;
+            scope.loadWindowTemp = this;
 
+            //При перезагрузке страницы
+            var hash = $winStorage.get();
+            if (hash && this.pushState) {
+                var win_id = $location.search();
+                var timer = $interval(function () {
+                   if (this.allElements.length) {
+                       var obj = this.allElements[win_id['win_id']];
+                       hash.el = obj.el;
+                       this.open(hash);
+                       $interval.cancel(timer);
+                   }
+                }.bind(this), 100);
+            }
+
+            //при загрузке проверяем
             win = this;
         };
 
@@ -200,17 +260,24 @@ popup.factory("$popupWindow", [
                 config = this.config = locSettings;
                 //текущий элемент
                 this.el = settings.el;
+
                 //Группа элементов
                 this.group = this.el[0].getAttribute("data-group");
                 //Текущий индекс элемента в коллекции
-
+                this.unicid = this.el[0].getAttribute('unicid');
                 if (this.group) {
-                    this.unicid = this.el[0].getAttribute('unicid');
                     this._getIndexFromNabor();
                 }
+                this._getElemIndex();
                 //Строим окно
                 this._buildWindow();
-                console.log(this.queue);
+            },
+            _getElemIndex: function () {
+                angular.forEach(this.allElements, function (v, k) {
+                    if (v.unicid === this.unicid) {
+                        this.win_id = k;
+                    }
+                }.bind(this));
             },
             _getIndexFromNabor: function () {
                 angular.forEach(this.setElements[this.group], function (item, key) {
@@ -300,11 +367,14 @@ popup.factory("$popupWindow", [
                         this.index = this.index - 1;
                         break;
                 }
+
                 this.el = elem;
+                this.unicid = this.el[0].getAttribute('unicid');
                 //Вычисляем реальные размеры для окна. но не применяем их дабы не было эффекта дергания
                 this.currWrapWidth = this.getWrapWidth();
                 //Показываем прелодер при пагинации
                 scope.navigation.preloader = true;
+                this._getElemIndex();
                 windowSectors.wrap.el.removeClass("win-show").addClass("win-close");
                 this._trigger("window:beforePagination", elem, windowSectors);
                 //Новая картинка
@@ -354,6 +424,7 @@ popup.factory("$popupWindow", [
                 }
             },
             _windowImageLoaded: function (e, item) {
+                this.currContent = item;
                 //убираем прелодер
                 scope.navigation.preloader = false;
                 if (!item.img.error) {
@@ -485,8 +556,10 @@ popup.factory("$popupWindow", [
             _updateUrl: function () {
                 if (this.pushState) {
                     var searchString = $location.search();
-                    searchString['win_id'] = this.currContent.unicid;
+                    searchString['win_id'] = this.currContent.win_id;
                     $location.search(searchString);
+                    //Сохранение конфига вызова элемента
+                    $winStorage.set(this.currContent);
                 }
             },
             updateScope: function () {
@@ -634,8 +707,9 @@ popup.factory("$popupWindow", [
         };
 
         var Item = function (obj, type) {
-            this.unicid = getUnicId();
+            this.unicid = win.el[0].getAttribute("unicid") || getUnicId();
             this.target = win.el;
+            this.win_id = win.win_id;
             this.openConfig = config;
 
             switch (config.winType) {
