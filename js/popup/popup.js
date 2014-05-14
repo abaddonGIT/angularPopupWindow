@@ -110,7 +110,7 @@ popup.factory("$popupWindow", [
     "$timeout",
     "$location",
     function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location) {
-        var win = null, scope = null, sizes = null, elemAttr = {}, def = {}, config = null;
+        var win, scope, sizes, elemAttr, def, config;
 
         var Window = function (settings) {
             if (!(this instanceof Window)) {
@@ -132,8 +132,8 @@ popup.factory("$popupWindow", [
                 unicid: null,
                 currContent: null,
                 loadImages: {},
-                body: $document[0].querySelector("body"),
-                pushState: true
+                pushState: true,
+                body: $document[0].querySelector("body")
             });
 
             def = {
@@ -161,6 +161,11 @@ popup.factory("$popupWindow", [
                 effect: 1
             };
 
+            win = null;
+            sizes = null;
+            elemAttr = {};
+            config = null;
+
             angular.extend(this.config, def, settings);
             config = this.config;
 
@@ -174,6 +179,8 @@ popup.factory("$popupWindow", [
                 this.currWrapWidth = null;
                 this._windowResize();
             }.bind(this);
+
+            //при загрузке проверяем
 
             win = this;
         };
@@ -396,6 +403,7 @@ popup.factory("$popupWindow", [
                     } else {
                         scope.inner.show = true;
                     }
+                    this._updateUrl();
                 } else {
                     scope.winError = errorsString.noimage;
                     scope.inner.show = true;
@@ -423,6 +431,7 @@ popup.factory("$popupWindow", [
                 }, 50);
                 this.body.style.overflow = "hidden";
                 this._trigger("window:afterContentLoaded", this.currContent, windowSectors);
+                this._updateUrl();
             },
             bind: function (event, handler) {
                 var name = event + ":" + this.timestamp;
@@ -472,6 +481,13 @@ popup.factory("$popupWindow", [
                         }
                     }
                 }.bind(this));
+            },
+            _updateUrl: function () {
+                if (this.pushState) {
+                    var searchString = $location.search();
+                    searchString['win_id'] = this.currContent.unicid;
+                    $location.search(searchString);
+                }
             },
             updateScope: function () {
                 this.root.$$phase || this.root.$digest();
@@ -579,6 +595,11 @@ popup.factory("$popupWindow", [
                 windowSectors.wrap.el.removeClass("win-show").addClass("win-close");
                 this.updateScope();
                 this.body.style.overflow = "auto";
+                if (this.pushState) {
+                    var searchString = $location.search();
+                    delete searchString['win_id'];
+                    $location.search(searchString);
+                }
             },
             /*
              * Получить следующий элемент в наборе
@@ -613,6 +634,9 @@ popup.factory("$popupWindow", [
         };
 
         var Item = function (obj, type) {
+            this.unicid = getUnicId();
+            this.target = win.el;
+            this.openConfig = config;
 
             switch (config.winType) {
                 case 'image':
@@ -705,6 +729,10 @@ popup.factory("$popupWindow", [
             }
         };
 
+        var getUnicId = function () {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        };
+
         return {
             init: function (settings) {
                 return Window(settings);
@@ -712,9 +740,7 @@ popup.factory("$popupWindow", [
             config: function () {
                 return win;
             },
-            unicid: function () {
-                return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            }
+            unicid: getUnicId
         }
     }])
 ;
