@@ -91,7 +91,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     el: angular.element(target),
                     winType: 'ajax',
                     dataRequest: {
-                        id: target.id
+                        id: target.getAttribute('name')
                     }
                 });
                 break;
@@ -112,7 +112,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
     * Перед пагинацией
      */
     window.bind("window:beforePagination", function (e, item, sectors) {
-        window.config.dataRequest.id = item[0].id;
+        window.config.dataRequest.id = item[0].getAttribute('name');
     });
     /*
      * Перед загрузкой контента
