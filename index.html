@@ -8,13 +8,13 @@
     </head>
     <body ng-controller="baseController">
         <div class="images">
-            <a ng-repeat="image in images" data-popup-window href="{{image.src}}" ng-click="open($event)" data-group="first" class="win-image"><img class="like" width="100" src="{{image.src}}" alt="" /></a>
+            <a ng-repeat="image in images" id="image_{{image.id}}" data-popup-window href="{{image.src}}" ng-click="open($event)" data-group="first" class="win-image"><img class="like" width="100" src="{{image.src}}" alt="" /></a>
         </div>
         <hr class="clear" />
         <div>
-            <a style="cursor: pointer; display: block; margin: 5px 0;" ng-repeat="image in images" data-popup-window ng-click="open($event)" id="{{image.id}}" class="win-image-ajax" data-group="free">{{image.title}}</a>
+            <a style="cursor: pointer; display: block; margin: 5px 0;" ng-repeat="image in images" name="{{image.id}}" data-popup-window ng-click="open($event)" id="image_ajax_{{image.id}}" class="win-image-ajax" data-group="free">{{image.title}}</a>
         </div>
-        <a href="img/01.jpg" data-popup-window ng-click="open($event)" class="win-html">
+        <a href="img/01.jpg" id="image_html_{{image.id}}" data-popup-window ng-click="open($event)" class="win-html">
             <img src="img/02.jpg" alt="" width="200" />
         </a>
 
