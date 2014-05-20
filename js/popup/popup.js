@@ -110,7 +110,11 @@ popup.directive("htmlContent", ['$popupWindow', '$http', '$compile', function ($
 popup.factory("$winStorage", ["$window", "$location", function ($window, $location) {
     //Сохраняет объект в хранилище
     var setItem = function (item) {
-        var config = JSON.stringify(item.openConfig);
+        //console.log(item.openConfig);
+        var config = JSON.stringify(item.openConfig, function (key, value) {
+            if (key == 'el') return undefined;
+            return value;
+        });
         localStorage.setItem(item.win_id, config);
     };
     //Достает из хранилища
@@ -150,12 +154,8 @@ popup.factory("$popupWindow", [
             if (!(this instanceof Window)) {
                 return new Window(settings);
             }
-
             scope = settings.scope;
-            scope.inner = {
-                show: false
-            };
-
+            //Настройки для инстанса
             angular.extend(this, {
                 config: {},
                 root: $rootScope,
@@ -173,7 +173,7 @@ popup.factory("$popupWindow", [
                 tpls: [],
                 body: $document[0].querySelector("body")
             });
-
+            //Настройки для конкретного окна
             def = {
                 resize: true,
                 padding: 15,
@@ -199,8 +199,8 @@ popup.factory("$popupWindow", [
                 userControl: false,
                 effect: 1
             };
-
-            win = null;
+            //Обнуляем гопшу при следующих вызовах
+            win = this;
             sizes = null;
             elemAttr = {};
             config = null;
@@ -231,115 +231,70 @@ popup.factory("$popupWindow", [
                     }
                 }
             }
-            //при загрузке проверяем
-            win = this;
         };
 
         Window.prototype = {
+            //Открывает окно
             open: function (settings) {
                 //Ресайз окна
                 $W.on('resize', function () {
                     this.currWrapWidth = null;
-                    if (scope.inner.show) {
-                        this._windowResize();
-                    }
+                    this._windowResize();
                 }.bind(this));
 
                 var locSettings = {};
-                //Строим конфиг
-                angular.forEach(def, function (obj, key) {
-                    if (settings[key]) {
-                        locSettings[key] = settings[key];
-                    } else {
-                        locSettings[key] = def[key];
-                    }
-                });
+                //Строим конфиг текущего элемента
+                angular.extend(locSettings, def, settings);
                 //настройки
-                config = this.config = locSettings;
-                //текущий элемент
-                this.el = settings.el;
-                //Группа элементов
-                this.group = this.el[0].getAttribute("data-group");
-                //Текущий индекс элемента в коллекции
-                this.unicid = this.el[0].getAttribute('unicid');
+                angular.extend(this, {
+                    el: settings.el,
+                    group: settings.el[0].getAttribute("data-group"),
+                    unicid: settings.el[0].getAttribute('unicid'),
+                    config: locSettings,
+                    win_id: settings.el[0].id
+                });
+                config = this.config;
                 if (this.group) {
                     this._getIndexFromNabor();
                 }
-                //в качестве id окна выступает id элемента по которому был совершен клик
-                this.win_id = this.el[0].id;
                 //Подгрузка внутренней части окна
                 this._loadInnerTpl(function () {
-                    //Строим окно
-                    this._buildWindow();
+                    $timeout(function () {
+                        this._defaultWindow();
+                        this._loadContent();
+                    }.bind(this), 0);
                 }.bind(this));
             },
+            //Подгрузка области контента
             _loadInnerTpl: function (callback) {
                 if (config.innerTpl) {
-                    var tplMark = config.innerTpl.replace(/[/.]/g, '_');
-                    if (!this._inTpls(this.tpls, tplMark)) {
-                        this._hideOther(tplMark);
+                    var tpl = templateCache.get(config.innerTpl);
+                    if (!tpl) {
                         $http.post(config.innerTpl).success(function (data) {
-                            var res = angular.element(data);
-                            res[0].setAttribute('data-mark', tplMark);
-                            windowSectors.wrap.el.append(res);
+                            windowSectors.wrap.el.html(data);
                             var content = windowSectors.wrap.el.contents();
                             //Добавляем метку к блоку
                             $compile(content)(this.scope);
-                            this.tpls.push({mark: tplMark, tpl: res});
+                            templateCache.put(config.innerTpl, data);
                             callback();
                         }.bind(this));
                     } else {//Шаблон уже был подгружен и его не нодо прогонять
-                        this._hideOther(tplMark);
+                        windowSectors.wrap.el.html(tpl);
+                        var content = windowSectors.wrap.el.contents();
+                        $compile(content)(this.scope);
                         callback();
                     }
                 } else {
                     throw ("Не указан шаблон внутренней части окна!");
                 }
             },
-            //Проверяет был ли такой шаблон уже интерпритирован
-            _inTpls: function (array, str) {
-                var ln = array.length;
-                while (ln--) {
-                    var loc = array[ln];
-                    if (loc['mark'] === str) {
-                        return true;
-                        die;
-                    }
-                }
-            },
-            //Скрывает остальные шаблоны
-            _hideOther: function (mark) {
-                var ln = this.tpls.length;
-                while (ln--) {
-                    var loc = this.tpls[ln];
-                    if (loc['mark'] !== mark) {
-                        loc.tpl[0].style.display = 'none';
-                    } else {
-                        loc.tpl[0].style.display = 'block';
-                    }
-                };
-            },
+            //Находит текущий элемент в наборе однотипных
             _getIndexFromNabor: function () {
                 angular.forEach(this.setElements[this.group], function (item, key) {
                     if (item.unicid === this.unicid) {
                         this.index = key;
                     }
                 }.bind(this));
-            },
-            _buildWindow: function () {
-                //Как только все части окна подгруженны начинаем впихивать туда контент
-                if (!this.allSectorsLoaded) {
-                    var loadTpl = $interval(function () {
-                        if (windowSectors.inner.loaded && windowSectors.header.loaded && windowSectors.content.loaded && windowSectors.footer.loaded && windowSectors.wrap.loaded) {
-                            this._defaultWindow();
-                            $interval.cancel(loadTpl);
-                            this.allSectorsLoaded = true;
-                            this._loadContent();
-                        }
-                    }.bind(this), 100);
-                } else {
-                    this._loadContent();
-                }
             },
             _defaultWindow: function () {
                 sizes = this.sizes = this.getTrueWindowSize();
@@ -569,32 +524,30 @@ popup.factory("$popupWindow", [
             //Пересчет размеров окна
             _windowResize: function () {
                 sizes = this.getTrueWindowSize(), newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
-                //scope.$apply(function () {
-                    scope.inner.width = newWinWidth;
-                    scope.inner.height = newWinHeight;
-                    if (config.resize) {
-                        //Размер всплывающего окна
-                        wrap = this.getWrapWidth();
-                        scope.wrap.width = wrap;
+                scope.inner.width = newWinWidth;
+                scope.inner.height = newWinHeight;
+                if (config.resize) {
+                    //Размер всплывающего окна
+                    wrap = this.getWrapWidth();
+                    scope.wrap.width = wrap;
 
-                        //Размер изображения внутри окна
-                        if (!this.currContent.param.noResize) {
-                            newSizes = this.getNewSize(this.currContent);
-                            if (this.currContent.img.ratio < 1) {
-                                if (newSizes[0] <= config.minSizes.width) {
-                                    scope.wrap.width = config.minSizes.width;
-                                } else {
-                                    scope.wrap.width = newSizes[0];
-                                }
+                    //Размер изображения внутри окна
+                    if (!this.currContent.param.noResize) {
+                        newSizes = this.getNewSize(this.currContent);
+                        if (this.currContent.img.ratio < 1) {
+                            if (newSizes[0] <= config.minSizes.width) {
+                                scope.wrap.width = config.minSizes.width;
                             } else {
                                 scope.wrap.width = newSizes[0];
                             }
-                            scope.content.img.width = scope.content.img.el.width = newSizes[0];
-                            scope.content.img.height = scope.content.img.el.height = newSizes[1];
+                        } else {
+                            scope.wrap.width = newSizes[0];
                         }
+                        scope.content.img.width = scope.content.img.el.width = newSizes[0];
+                        scope.content.img.height = scope.content.img.el.height = newSizes[1];
                     }
+                }
                 this.updateScope();
-                //}.bind(this));
             },
             _updateUrl: function () {
                 if (this.pushState && this.currContent.win_id) {
@@ -675,12 +628,10 @@ popup.factory("$popupWindow", [
                 if (item.img.ratio < 1) {
                     desiredHeight -= config.outPadding;
                 }
-
                 //Проверка на минимальную высоту
                 if (desiredHeight < config.minSizes.height) {
                     desiredHeight = config.minSizes.height;
                 }
-
                 if ((item.img.oric_width / desiredWidth) > (item.img.oric_height / desiredHeight)) {
                     result[0] = desiredWidth;
                     result[1] = Math.round(item.img.oric_height * desiredWidth / item.img.oric_width);
@@ -853,9 +804,6 @@ popup.factory("$popupWindow", [
         return {
             init: function (settings) {
                 return Window(settings);
-            },
-            config: function () {
-                return win;
             },
             unicid: getUnicId
         }

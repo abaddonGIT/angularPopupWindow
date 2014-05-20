@@ -73,7 +73,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
     $scope.open = function (event) {
         event.preventDefault();
         var target = event.currentTarget;
-        console.log(target.className);
+        //console.log(target.className);
         switch (target.className) {
             case 'win-image ng-scope':
                 window.open({
