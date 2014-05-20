@@ -1,0 +1,15 @@
+<div id="window-styled-block">
+    <div id="window-header" data-window-section="header">
+        <b>{{header.title || content.param.title}}</b>
+        <a ng-click="close()" class="close">Закрыть</a>
+        <a ng-click="prev()" class="prev nav" ng-show="navigation.prev.show">Назад</a>
+        <a ng-click="next()" class="next nav" ng-show="navigation.next.show">Вперед</a>
+    </div>
+    <div id="content" data-window-section="content">
+
+    </div>
+    <div id="window-footer" data-window-section="footer">
+        {{footer.description}}
+        <h3>Номер: {{content.id}}</h3>
+    </div>
+</div>

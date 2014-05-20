@@ -99,6 +99,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                 window.open({
                     el: angular.element(target),
                     winType: 'ajax',
+                    innerTpl: 'tpl/contentTpl.html',
                     dataRequest: {
                         title: 'Первая картинка',
                         type: 'html',

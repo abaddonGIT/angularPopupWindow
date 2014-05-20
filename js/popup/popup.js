@@ -63,33 +63,30 @@ popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($po
             case 'wrap':
                 windowSectors.wrap = {el: elem, loaded: true};
                 break;
-        };
+        }
+        ;
     };
 }]);
 /*
  * Основной шаблон
  */
-popup.directive("popupWrap", ['$popupWindow', '$http', '$compile', 'templateCache', 'windowSectors', function ($popupWindow, $http, $compile, templateCache, windowSectors) {
-    return function (scope, elem, attr) {
-        var stop = scope.$watch('loadWindowTemp', function (value) {
-            if (value) {
-                var temp = templateCache.get(value.config.wrapTpl);
-                windowSectors.inner.el = elem;
-                if (temp) {
-                    $compile(temp)(scope);
-                    windowSectors.inner.loaded = true;
-                } else {
-                    $http.post(value.config.wrapTpl).success(function (template) {
-                        elem.html(template);
-                        var content = elem.contents();
-                        $compile(content)(scope);
-                        windowSectors.inner.loaded = true;
-                        templateCache.put(value.config.wrapTpl, content);
-                    });
-                }
-                stop();
-            }
-        });
+popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
+    return {
+        replace: true,
+        template: '<div id="window-wrap" ng-show="inner.show">' +
+            '<div id="wrap-inner" ng-style="{width:inner.width + \'px\', height:inner.height + \'px\', padding:inner.padding}">' +
+            '<div id="wrap-block" data-window-section="wrap" ng-style="{width:wrap.width + \'px\', padding:wrap.padding + \'px\'}">' +
+            '</div>' +
+            '</div>' +
+            '</div>',
+        link: function (scope, elem, attr) {
+            var stop = scope.$watch('loadWindowTemp', function (value) {
+                windowSectors.inner = {
+                    el: elem,
+                    loaded: true
+                };
+            });
+        }
     };
 }]);
 /*
@@ -145,8 +142,9 @@ popup.factory("$popupWindow", [
     "$location",
     "$winStorage",
     "$rootElement",
-    function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location, $winStorage, $rootElement) {
-        var win, scope, sizes, elemAttr, def, config;
+    "templateCache",
+    function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache) {
+        var win, scope, sizes, elemAttr, def, config, $W = angular.element($window);
 
         var Window = function (settings) {
             if (!(this instanceof Window)) {
@@ -154,6 +152,9 @@ popup.factory("$popupWindow", [
             }
 
             scope = settings.scope;
+            scope.inner = {
+                show: false
+            };
 
             angular.extend(this, {
                 config: {},
@@ -168,7 +169,8 @@ popup.factory("$popupWindow", [
                 unicid: null,
                 currContent: null,
                 loadImages: {},
-                pushState: false,
+                pushState: true,
+                tpls: [],
                 body: $document[0].querySelector("body")
             });
 
@@ -178,6 +180,7 @@ popup.factory("$popupWindow", [
                 margin: 10,
                 outPadding: 100,
                 winType: 'image',
+                innerTpl: 'tpl/defaultWrapTpl.html',//Шаблон внутренней части окна. может быть различным для разных вызовов
                 maxSizes: {
                     width: 1024,
                     height: 768
@@ -209,13 +212,6 @@ popup.factory("$popupWindow", [
             scope.$on("window:imageLoaded", this._windowImageLoaded.bind(this));//После разбора и создания объекта отображения, который включает в себя изображение
             scope.$on("window:htmlLoaded", this._windowHtmlLoaded.bind(this));//После создания объекта отображения, который представляет из себя просто кусок html-кода
 
-            //Ресайз окна
-            $window.onresize = function () {
-                //сброс установленной высоты для её динамического расчета
-                this.currWrapWidth = null;
-                this._windowResize();
-            }.bind(this);
-
             scope.windowStart = this;
             scope.loadWindowTemp = this;
 
@@ -241,6 +237,14 @@ popup.factory("$popupWindow", [
 
         Window.prototype = {
             open: function (settings) {
+                //Ресайз окна
+                $W.on('resize', function () {
+                    this.currWrapWidth = null;
+                    if (scope.inner.show) {
+                        this._windowResize();
+                    }
+                }.bind(this));
+
                 var locSettings = {};
                 //Строим конфиг
                 angular.forEach(def, function (obj, key) {
@@ -263,8 +267,57 @@ popup.factory("$popupWindow", [
                 }
                 //в качестве id окна выступает id элемента по которому был совершен клик
                 this.win_id = this.el[0].id;
-                //Строим окно
-                this._buildWindow();
+                //Подгрузка внутренней части окна
+                this._loadInnerTpl(function () {
+                    //Строим окно
+                    this._buildWindow();
+                }.bind(this));
+            },
+            _loadInnerTpl: function (callback) {
+                if (config.innerTpl) {
+                    var tplMark = config.innerTpl.replace(/[/.]/g, '_');
+                    if (!this._inTpls(this.tpls, tplMark)) {
+                        this._hideOther(tplMark);
+                        $http.post(config.innerTpl).success(function (data) {
+                            var res = angular.element(data);
+                            res[0].setAttribute('data-mark', tplMark);
+                            windowSectors.wrap.el.append(res);
+                            var content = windowSectors.wrap.el.contents();
+                            //Добавляем метку к блоку
+                            $compile(content)(this.scope);
+                            this.tpls.push({mark: tplMark, tpl: res});
+                            callback();
+                        }.bind(this));
+                    } else {//Шаблон уже был подгружен и его не нодо прогонять
+                        this._hideOther(tplMark);
+                        callback();
+                    }
+                } else {
+                    throw ("Не указан шаблон внутренней части окна!");
+                }
+            },
+            //Проверяет был ли такой шаблон уже интерпритирован
+            _inTpls: function (array, str) {
+                var ln = array.length;
+                while (ln--) {
+                    var loc = array[ln];
+                    if (loc['mark'] === str) {
+                        return true;
+                        die;
+                    }
+                }
+            },
+            //Скрывает остальные шаблоны
+            _hideOther: function (mark) {
+                var ln = this.tpls.length;
+                while (ln--) {
+                    var loc = this.tpls[ln];
+                    if (loc['mark'] !== mark) {
+                        loc.tpl[0].style.display = 'none';
+                    } else {
+                        loc.tpl[0].style.display = 'block';
+                    }
+                };
             },
             _getIndexFromNabor: function () {
                 angular.forEach(this.setElements[this.group], function (item, key) {
@@ -466,6 +519,7 @@ popup.factory("$popupWindow", [
                     scope.winError = errorsString.noimage;
                     scope.inner.show = true;
                 }
+                this._windowResize();
                 this.updateScope();
                 $timeout(function () {
                     windowSectors.wrap.el.removeClass("win-close");
@@ -482,6 +536,7 @@ popup.factory("$popupWindow", [
                 angular.extend(scope.content, item.param);
                 this.currContent = item;
                 scope.inner.show = true;
+                this._windowResize();
                 this.updateScope();
                 $timeout(function () {
                     windowSectors.wrap.el.removeClass("win-close");
@@ -514,7 +569,7 @@ popup.factory("$popupWindow", [
             //Пересчет размеров окна
             _windowResize: function () {
                 sizes = this.getTrueWindowSize(), newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
-                scope.$apply(function () {
+                //scope.$apply(function () {
                     scope.inner.width = newWinWidth;
                     scope.inner.height = newWinHeight;
                     if (config.resize) {
@@ -538,7 +593,8 @@ popup.factory("$popupWindow", [
                             scope.content.img.height = scope.content.img.el.height = newSizes[1];
                         }
                     }
-                }.bind(this));
+                this.updateScope();
+                //}.bind(this));
             },
             _updateUrl: function () {
                 if (this.pushState && this.currContent.win_id) {
@@ -648,6 +704,7 @@ popup.factory("$popupWindow", [
              * Закрывает текущее окно
              */
             closeWindow: function () {
+                $W.off('resize');
                 elemAttr = {};
                 scope.inner.show = false;
                 this.currWrapWidth = null;
