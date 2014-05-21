@@ -66,7 +66,6 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
 
 
     var window = $scope.popup = $popupWindow.init({
-        wrapTpl: 'tpl/wrapTpl.html',
         scope: $scope
     });
 
@@ -80,9 +79,8 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     el: angular.element(target),
                     winType: "image",
                     dataRequest: {
-                        header: {
-                            title: "test"
-                        }
+                        title: "test",
+                        description: "ololosha"
                     }
                 });
                 break;
@@ -101,9 +99,19 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     winType: 'ajax',
                     innerTpl: 'tpl/contentTpl.html',
                     dataRequest: {
-                        title: 'Первая картинка',
-                        type: 'html',
-                        href: 'img/01.jpg'
+                        title: 'Просто html код',
+                        type: 'html'
+                    }
+                });
+                break;
+            case 'win-json':
+                window.open({
+                    el: angular.element(target),
+                    winType: 'ajax',
+                    innerTpl: 'tpl/jsonTpl.html',
+                    dataRequest: {
+                        title: 'Простой ответ JSON',
+                        description: 'Полученные значения просто записываются в скоп'
                     }
                 });
                 break;

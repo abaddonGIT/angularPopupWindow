@@ -14,11 +14,11 @@ popup.value("errorsString", {
     noimage: "Битый адрес картинки"
 });
 popup.value("windowSectors", {
-    inner: {el: null, loaded: false},
-    wrap: {el: null, loaded: false},
-    header: {el: null, loaded: false},
-    content: {el: null, loaded: false},
-    footer: {el: null, loaded: false}
+    inner: {el: null},
+    wrap: {el: null},
+    header: {el: null},
+    content: {el: null},
+    footer: {el: null}
 });
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
@@ -29,7 +29,6 @@ popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
                     //Создаем наборы из однотипных элементов
                     var unicid = $popupWindow.unicid();
                     elem[0].setAttribute("unicid", unicid);
-
                     if (attr.group) {
                         if (value.setElements[group]) {
                             value.setElements[group].push({unicid: unicid, el: elem});
@@ -52,16 +51,16 @@ popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($po
         var sector = attr.windowSection;
         switch (sector) {
             case 'header':
-                windowSectors.header = {el: elem, loaded: true};
+                windowSectors.header = {el: elem};
                 break;
             case 'content':
-                windowSectors.content = {el: elem, loaded: true};
+                windowSectors.content = {el: elem};
                 break;
             case 'footer':
-                windowSectors.footer = {el: elem, loaded: true};
+                windowSectors.footer = {el: elem};
                 break;
             case 'wrap':
-                windowSectors.wrap = {el: elem, loaded: true};
+                windowSectors.wrap = {el: elem};
                 break;
         }
         ;
@@ -73,9 +72,9 @@ popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($po
 popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
     return {
         replace: true,
-        template: '<div id="window-wrap" ng-show="inner.show">' +
-            '<div id="wrap-inner" ng-style="{width:inner.width + \'px\', height:inner.height + \'px\', padding:inner.padding}">' +
-            '<div id="wrap-block" data-window-section="wrap" ng-style="{width:wrap.width + \'px\', padding:wrap.padding + \'px\'}">' +
+        template: '<div id="window-wrap" ng-show="winpopup.inner.show">' +
+            '<div id="wrap-inner" ng-style="{width:winpopup.inner.width + \'px\', height:winpopup.inner.height + \'px\', padding:winpopup.inner.padding}">' +
+            '<div id="wrap-block" data-window-section="wrap" ng-style="{width:winpopup.wrap.width + \'px\', padding:winpopup.wrap.padding + \'px\'}">' +
             '</div>' +
             '</div>' +
             '</div>',
@@ -92,7 +91,6 @@ popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
 /*
  * Шапка всплывающего окна
  */
-
 popup.directive("imageIncontent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
         scope.$emit("window:imageContent", elem, attr);
@@ -148,8 +146,8 @@ popup.factory("$popupWindow", [
     "$rootElement",
     "templateCache",
     function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache) {
+        "use strict";
         var win, scope, sizes, elemAttr, def, config, $W = angular.element($window);
-
         var Window = function (settings) {
             if (!(this instanceof Window)) {
                 return new Window(settings);
@@ -204,17 +202,13 @@ popup.factory("$popupWindow", [
             sizes = null;
             elemAttr = {};
             config = null;
-
             angular.extend(this.config, def, settings);
             config = this.config;
-
             scope.$on("window:navigate", this._windowPagination.bind(this));//листалка
             scope.$on("window:imageLoaded", this._windowImageLoaded.bind(this));//После разбора и создания объекта отображения, который включает в себя изображение
-            scope.$on("window:htmlLoaded", this._windowHtmlLoaded.bind(this));//После создания объекта отображения, который представляет из себя просто кусок html-кода
-
+            scope.$on("window:contentLoaded", this._windowContentLoaded.bind(this));//После создания объекта отображения, который представляет из себя просто кусок html-кода
             scope.windowStart = this;
             scope.loadWindowTemp = this;
-
             //При перезагрузке страницы
             if (this.pushState) {
                 var search = $location.search();
@@ -232,16 +226,9 @@ popup.factory("$popupWindow", [
                 }
             }
         };
-
         Window.prototype = {
             //Открывает окно
             open: function (settings) {
-                //Ресайз окна
-                $W.on('resize', function () {
-                    this.currWrapWidth = null;
-                    this._windowResize();
-                }.bind(this));
-
                 var locSettings = {};
                 //Строим конфиг текущего элемента
                 angular.extend(locSettings, def, settings);
@@ -264,6 +251,14 @@ popup.factory("$popupWindow", [
                         this._loadContent();
                     }.bind(this), 0);
                 }.bind(this));
+
+                //Ресайз окна
+                if (config.resize) {
+                    $W.on('resize', function () {
+                        this.currWrapWidth = null;
+                        this._windowResize();
+                    }.bind(this));
+                }
             },
             //Подгрузка области контента
             _loadInnerTpl: function (callback) {
@@ -296,19 +291,27 @@ popup.factory("$popupWindow", [
                     }
                 }.bind(this));
             },
+            //Дефолтовое состояние окна
             _defaultWindow: function () {
                 sizes = this.sizes = this.getTrueWindowSize();
-                var inner = {
-                    padding: config.margin + 'px 0 ' + config.margin + 'px 0',
-                    width: sizes.pageWidth,
-                    height: sizes.viewHeight
+                var winpopup = {
+                    inner: {
+                        padding: config.margin + 'px 0 ' + config.margin + 'px 0',
+                        width: sizes.pageWidth,
+                        height: sizes.viewHeight
+                    },
+                    wrap: {
+                        padding: config.padding,
+                        width: this.getWrapWidth()
+                    },
+                    navigation: {
+                        preloader: false,
+                        prev: false,
+                        next: false
+                    },
+                    content: {}
                 };
-                //Размер внешнего блока
-                var wrap = {
-                    padding: config.padding,
-                    width: this.getWrapWidth()
-                };
-
+                scope.winpopup = winpopup;
                 //Добавление класса эффектов
                 switch (config.effect) {
                     case 1:
@@ -329,29 +332,6 @@ popup.factory("$popupWindow", [
 
                 }
                 ;
-
-                var header = {};
-                var content = {
-                    img: {},
-                    param: {}
-                };
-                var navigation = {
-                    prev: {
-                        show: false
-                    },
-                    next: {
-                        show: false
-                    },
-                    preloader: false
-                }
-                var footer = {};
-
-                scope.wrap = wrap;
-                scope.inner = inner;
-                scope.navigation = navigation;
-                scope.header = header;
-                scope.content = content;
-                scope.footer = footer;
             },
             _windowPagination: function (e, elem, act, param) {
                 switch (act) {
@@ -362,14 +342,13 @@ popup.factory("$popupWindow", [
                         this.index = this.index - 1;
                         break;
                 }
-
-                this.el = elem;
-                this.unicid = this.el[0].getAttribute('unicid');
-                this.win_id = this.el[0].id;
+                angular.extend(this, {
+                    el: elem,
+                    unicid: elem[0].getAttribute('unicid'),
+                    win_id: elem[0].id
+                });
                 //Вычисляем реальные размеры для окна. но не применяем их дабы не было эффекта дергания
                 this.currWrapWidth = this.getWrapWidth();
-                //Показываем прелодер при пагинации
-                scope.navigation.preloader = true;
                 windowSectors.wrap.el.removeClass("win-show").addClass("win-close");
                 this._trigger("window:beforePagination", elem, windowSectors);
                 //Новая картинка
@@ -381,8 +360,8 @@ popup.factory("$popupWindow", [
                 this._trigger("window:beforeContentLoaded", windowSectors);
                 elemAttr = config.dataRequest || {};
                 switch (config.winType) {
-                    case 'image':
-                        this.currContent = new Item();
+                    case 'image'://Для картинки без ajax-са
+                        new Img(this.el);
                         break;
                     case 'ajax'://подгрузка контента через ajax
                         config.ajax.data = config.dataRequest;
@@ -391,115 +370,84 @@ popup.factory("$popupWindow", [
                         }.bind(this);
                         $http(config.ajax).success(function (data, status) {
                                 if (data instanceof Object) {//если вернули json
-                                    this.currContent = new Item(data, 'json');
-                                } else {
-                                    //Пользовательская обработка
-                                    if (config.userControl) {
-                                        var item = new Item(data, 'giglet');
-                                        this.currContent = item;
-                                        this._trigger("window:userHtmlLoaded", item, windowSectors);
+                                    if (data.src) {
+                                        new Content(this.el, 'image', data);
                                     } else {
-                                        var content = windowSectors.content.el;
-                                        content.html(data);
-                                        $compile(content.contents())(scope);
+                                        new Content(this.el, 'json', data);
                                     }
+                                } else {
+                                    windowSectors.content.el.html(data);
+                                    var content = windowSectors.content.el.contents();
+                                    $compile(content)(scope);
                                 }
                             }.bind(this)).error(function (data, status) {
                             throw ("При попытке получения данных произошел сбой!");
                         });
                         //картинка, которая была внутри полученного контента загружена
                         scope.$on("window:imageContent", function (e, img, attr) {
-                            this.currContent = new Item(img, 'image');
+                            new Img(img);
                         }.bind(this));
                         //просто html контент загружен
                         scope.$on("window:htmlContent", function (e, elem, attr) {
-                            this.currContent = new Item(elem, 'html');
+                            new Content(elem, 'html');
                         });
                         break;
                 }
             },
-            _windowImageLoaded: function (e, item) {
-                this.currContent = item;
-                //убираем прелодер
-                scope.navigation.preloader = false;
-                if (!item.img.error) {
-                    var param = item.param;
-                    scope.winError = false;
-                    this.queue.push(item);
-                    //данные по картинке
-                    angular.extend(scope.content.img, item.img);
-                    //доп данные для центральной части
-                    angular.extend(scope.content, param.content);
-                    //Даные для шапки
-                    angular.extend(scope.header, param.header);
-                    //Для подвала
-                    angular.extend(scope.footer, param.footer);
-                    //Все параметры
-                    angular.extend(scope.content.param, param);
-                    if (item.img.ratio < 1) {
-                        if (item.img.width <= config.minSizes.width) {
-                            scope.wrap.width = config.minSizes.width;
-                        } else {
-                            scope.wrap.width = item.img.width;
-                        }
+            //Постройка контента окна для типа image
+            _windowImageLoaded: function (e, image) {
+                //текущая картинка
+                this.currContent = image;
+                scope.winpopup.content = image;
+                if (image.ratio < 1) {
+                    if (image.width <= config.minSizes.width) {
+                        scope.winpopup.wrap.width = config.minSizes.width;
                     } else {
-                        scope.wrap.width = item.img.width;
+                        scope.winpopup.wrap.width = image.width;
                     }
-                    //навигация
-                    if (this.group) {
-                        if (this.index === 0) {//Первый
-                            if (this.setElements[this.group].length === 1) {
-                                scope.navigation.next.show = false;
-                                scope.navigation.prev.show = false;
-                            } else {
-                                scope.navigation.next.show = true;
-                                scope.navigation.prev.show = false;
-                            }
-                        } else if (this.index === (this.setElements[this.group].length - 1)) {//последний
-                            scope.navigation.next.show = false;
-                            scope.navigation.prev.show = true;
-                        } else {
-                            scope.navigation.next.show = true;
-                            scope.navigation.prev.show = true;
-                        }
-                    }
-                    //После загрузки фотки
-                    if (config.userControl) {
-                        this._trigger("window:userImageLoaded", item, windowSectors);
-                    } else {
-                        scope.inner.show = true;
-                    }
-                    this._updateUrl();
                 } else {
-                    scope.winError = errorsString.noimage;
-                    scope.inner.show = true;
+                    scope.winpopup.wrap.width = image.width;
+                }
+                //Пагинация
+                this.afterLoad(image);
+            },
+            //Остальной контент
+            _windowContentLoaded: function (e, content) {
+                this.currContent = content;
+                scope.winpopup.content = content;
+                this.afterLoad(content);
+            },
+            //после подгрузки и распихания переменных
+            afterLoad: function (object) {
+                var nav;
+                if (this.group) {
+                    if (this.index === 0) {//Первый
+                        if (this.setElements[this.group].length === 1) {
+                            nav = {next: false, prev: false};
+                        } else {
+                            nav = {next: true, prev: false};
+                        }
+                    } else if (this.index === (this.setElements[this.group].length - 1)) {//последний
+                        nav = {next: false, prev: true};
+                    } else {
+                        nav = {next: true, prev: true};
+                    }
+                    scope.winpopup.navigation = nav;
+                }
+                if (config.userControl) {//Пользовательское управление
+                    //this._trigger("window:userImageLoaded", object, windowSectors);
+                } else {
+                    scope.winpopup.inner.show = true;
+                    this._updateUrl();
                 }
                 this._windowResize();
                 this.updateScope();
+
                 $timeout(function () {
-                    windowSectors.wrap.el.removeClass("win-close");
-                    windowSectors.wrap.el.addClass("win-show");
+                    windowSectors.wrap.el.removeClass("win-close").addClass("win-show");
                 }, 50);
                 this.body.style.overflow = "hidden";
                 this._trigger("window:afterContentLoaded", this.currContent, windowSectors);
-            },
-            _windowHtmlLoaded: function (e, item) {
-                this.queue.push(item);
-                //убираем прелодер
-                scope.navigation.preloader = false;
-                //доп данные
-                angular.extend(scope.content, item.param);
-                this.currContent = item;
-                scope.inner.show = true;
-                this._windowResize();
-                this.updateScope();
-                $timeout(function () {
-                    windowSectors.wrap.el.removeClass("win-close");
-                    windowSectors.wrap.el.addClass("win-show");
-                }, 50);
-                this.body.style.overflow = "hidden";
-                this._trigger("window:afterContentLoaded", this.currContent, windowSectors);
-                this._updateUrl();
             },
             bind: function (event, handler) {
                 var name = event + ":" + this.timestamp;
@@ -523,28 +471,29 @@ popup.factory("$popupWindow", [
             },
             //Пересчет размеров окна
             _windowResize: function () {
-                sizes = this.getTrueWindowSize(), newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
-                scope.inner.width = newWinWidth;
-                scope.inner.height = newWinHeight;
+                var newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
+                sizes = this.getTrueWindowSize();
+                scope.winpopup.inner.width = newWinWidth;
+                scope.winpopup.inner.height = newWinHeight;
                 if (config.resize) {
                     //Размер всплывающего окна
                     wrap = this.getWrapWidth();
-                    scope.wrap.width = wrap;
+                    scope.winpopup.wrap.width = wrap;
 
                     //Размер изображения внутри окна
                     if (!this.currContent.param.noResize) {
                         newSizes = this.getNewSize(this.currContent);
-                        if (this.currContent.img.ratio < 1) {
+                        if (this.currContent.ratio < 1) {
                             if (newSizes[0] <= config.minSizes.width) {
-                                scope.wrap.width = config.minSizes.width;
+                                scope.winpopup.wrap.width = config.minSizes.width;
                             } else {
-                                scope.wrap.width = newSizes[0];
+                                scope.winpopup.wrap.width = newSizes[0];
                             }
                         } else {
-                            scope.wrap.width = newSizes[0];
+                            scope.winpopup.wrap.width = newSizes[0];
                         }
-                        scope.content.img.width = scope.content.img.el.width = newSizes[0];
-                        scope.content.img.height = scope.content.img.el.height = newSizes[1];
+                        scope.winpopup.content.width = scope.winpopup.content.el.width = newSizes[0];
+                        scope.winpopup.content.height = scope.winpopup.content.el.height = newSizes[1];
                     }
                 }
                 this.updateScope();
@@ -561,57 +510,25 @@ popup.factory("$popupWindow", [
             updateScope: function () {
                 this.root.$$phase || this.root.$digest();
             },
+            //Размеры окна
             getTrueWindowSize: function () {
-                var xScroll,
-                    yScroll,
-                    pageWidth,
-                    pageHeight,
-                    windowWidth,
-                    windowHeight,
-                    sizes = {},
-                    doc = $document[0].documentElement,
-                    d = $document[0],
-                    w = $window;
-
+                var xScroll, yScroll, pageWidth, pageHeight, windowWidth, windowHeight, d = $document[0], w = $window;
                 //ширина и высота с учетом скролла
-                if (w.innerHeight && w.scrollMaxY) {
-                    xScroll = d.body.scrollWidth;
-                    yScroll = w.innerHeight + w.scrollMaxY;
-                } else if (d.body.scrollHeight > d.body.offsetHeight) {
-                    xScroll = d.body.scrollWidth;
-                    yScroll = d.body.scrollHeight;
-                } else if (doc && doc.scrollHeight > doc.offsetHeight) {
-                    xScroll = doc.scrollWidth;
-                    yScroll = doc.scrollHeight;
-                } else {
-                    xScroll = d.body.offsetWidth;
-                    yScroll = d.body.offsetHeight;
-                }
-
-                if (self.innerHeight) {
-                    windowWidth = self.innerWidth;
-                    windowHeight = self.innerHeight;
-                } else if (doc && doc.clientHeight) {
-                    windowWidth = doc.clientWidth;
-                    windowHeight = doc.clientHeight;
-                } else if (d.body) {
-                    windowWidth = d.body.clientWidth;
-                    windowHeight = d.body.clientHeight;
-                }
-
+                xScroll = d.body.scrollWidth;
+                yScroll = d.body.scrollHeight;
+                windowWidth = w.innerWidth;
+                windowHeight = w.innerHeight;
                 if (yScroll < windowHeight) {
                     pageHeight = windowHeight;
                 } else {
                     pageHeight = yScroll;
                 }
-
                 if (xScroll < windowWidth) {
                     pageWidth = windowWidth;
                 } else {
                     pageWidth = xScroll;
                 }
-
-                return sizes = {
+                return {
                     'pageWidth': pageWidth,
                     'pageHeight': pageHeight,
                     'viewWidth': windowWidth,
@@ -621,22 +538,22 @@ popup.factory("$popupWindow", [
                 };
             },
             getNewSize: function (item) {
-                var wrapWidth = this.currWrapWidth || scope.wrap.width, winHeight = sizes.viewHeight, result = {};
+                var wrapWidth = this.currWrapWidth || scope.winpopup.wrap.width, winHeight = sizes.viewHeight, result = {};
                 //Желаемые размеры картинки
                 var desiredWidth = wrapWidth, desiredHeight = winHeight - (config.margin * 2 + config.padding * 2);
 
-                if (item.img.ratio < 1) {
+                if (item.ratio < 1) {
                     desiredHeight -= config.outPadding;
                 }
                 //Проверка на минимальную высоту
                 if (desiredHeight < config.minSizes.height) {
                     desiredHeight = config.minSizes.height;
                 }
-                if ((item.img.oric_width / desiredWidth) > (item.img.oric_height / desiredHeight)) {
+                if ((item.oric_width / desiredWidth) > (item.oric_height / desiredHeight)) {
                     result[0] = desiredWidth;
-                    result[1] = Math.round(item.img.oric_height * desiredWidth / item.img.oric_width);
+                    result[1] = Math.round(item.oric_height * desiredWidth / item.oric_width);
                 } else {
-                    result[0] = Math.round(item.img.oric_width * desiredHeight / item.img.oric_height);
+                    result[0] = Math.round(item.oric_width * desiredHeight / item.oric_height);
                     result[1] = desiredHeight;
                 }
                 return result;
@@ -657,7 +574,7 @@ popup.factory("$popupWindow", [
             closeWindow: function () {
                 $W.off('resize');
                 elemAttr = {};
-                scope.inner.show = false;
+                scope.winpopup.inner.show = false;
                 this.currWrapWidth = null;
                 this._defaultWindow();
                 windowSectors.wrap.el.removeClass("win-show").addClass("win-close");
@@ -700,103 +617,103 @@ popup.factory("$popupWindow", [
             data: {
             }
         };
-
-        var Item = function (obj, type) {
-            this.unicid = win.el[0].getAttribute("unicid") || getUnicId();
-            this.win_id = win.win_id;
-            this.openConfig = config;
-
-            switch (config.winType) {
+        //Конструктор для изображения
+        var Img = function (elem) {
+            angular.extend(this, {
+                unicid: elem[0].getAttribute("unicid") || getUnicId(),
+                win_id: elem[0].id,
+                openConfig: config
+            });
+            //Смотри что за элемент
+            var tagName = elem[0].tagName, link;
+            switch (tagName) {
+                case 'A'://если ссылка то берем href
+                    link = elem[0].href;
+                    break;
+                case 'IMG'://Если картинка то src
+                    link = elem[0].src;
+                    break;
+            }
+            //Создает объект для изображения
+            if (link) {
+                this.createImageObject(link);
+            } else {
+                throw ("Вы не передали ссылку на картинку!");
+            }
+        };
+        Img.prototype.createImageObject = function (link) {
+            var newSizes, img;
+            img = new Image();
+            img.onload = function () {
+                angular.extend(this, {
+                    oric_height: img.height,
+                    oric_width: img.width,
+                    src: link,
+                    el: img,
+                    param: elemAttr
+                });
+                this.ratio = this.oric_width / this.oric_height;
+                newSizes = win.getNewSize(this);
+                this.width = this.el.width = newSizes[0];
+                this.height = this.el.height = newSizes[1];
+                //Сообщаем что картинка подгружена
+                scope.$broadcast("window:imageLoaded", this);
+                img = null;
+            }.bind(this);
+            img.onerror = function () {
+                throw ("Такого изображения не существует!");
+            };
+            img.src = link;
+        };
+        //Объект контента для окна
+        var Content = function (elem, type, result) {
+            angular.extend(this, {
+                unicid: elem[0].getAttribute("unicid") || getUnicId(),
+                win_id: elem[0].id,
+                openConfig: config,
+                param: {}
+            });
+            switch (type) {
                 case 'image':
-                    this.img = {};
-                    var link = win.el[0].href;
-                    if (!link) {
-                        throw ("Вы не заполнили атребут href у источника!");
-                    } else {
-                        this.createImage(link);
-                    }
-                    break;
-                case 'ajax':
-                    switch (type) {
-                        case 'image':
-                            this.img = {};
-                            var link = obj[0].src;
-                            if (!link) {
-                                throw ("Вы не заполнили атребут src у источника!");
-                            } else {
-                                this.createImage(link);
-                            }
-                            break;
-                        case 'html'://Это обычный html контент не предпологает элементов с изменяемыми размерами
-                            this.createHtml(obj);
-                            break;
-                        case 'json'://контент из json строки
-                            if (obj.params) {
-                                angular.extend(elemAttr, obj.params);
-                            }
-                            //проверка передана ли картинка
-                            if (obj.src) {
-                                this.img = {};
-                                this.createImage(obj.src);
-                            }
-                            break;
-                        case 'giglet':
-                            return this.createGiglet(obj);
-                            break;
-                    }
-                    break;
-            }
-        };
-
-        Item.prototype = {
-            imageRendering: function (img, link) {
-                this.img.oric_width = img.width;
-                this.img.oric_height = img.height;
-                this.img.src = link;
-                this.img.el = img;
-                this.img.ratio = this.img.oric_width / this.img.oric_height;
-                var newSizes = win.getNewSize(this);
-                this.img.width = this.img.el.width = newSizes[0];
-                this.img.height = this.img.el.height = newSizes[1];
-                this.param = {};
-                angular.extend(this.param, elemAttr);
-            },
-            createImage: function (link) {
-                if (win.loadImages[link]) {
-                    this.imageRendering(win.loadImages[link], link);
-                    scope.$broadcast("window:imageLoaded", this);
-                } else {
-                    var img = new Image();
-                    img.onload = function () {
-                        this.imageRendering(img, link);
+                    var link = result.src;
+                    angular.extend(this.param, elemAttr, result);
+                    this.getImage(link, function (img) {
                         scope.$broadcast("window:imageLoaded", this);
-                        win.loadImages[link] = img;
-                        img = 0;
-                    }.bind(this);
-                    img.onerror = function () {
-                        this.img.error = true;
-                        this.img.el = img;
-                        scope.$broadcast("window:imageLoaded", this);
-                        img = 0;
-                    }.bind(this);
-                    img.src = link;
-                }
-            },
-            createHtml: function (obj) {
-                this.param = {};
-                this.el = obj;
-                elemAttr.noResize = true;
-                angular.extend(this.param, elemAttr);
-                scope.$broadcast("window:htmlLoaded", this);
-            },
-            createGiglet: function (obj) {
-                this.param = {};
-                this.el = obj;
-                elemAttr.noResize = true;
-                angular.extend(this.param, elemAttr);
-            }
+                    }.bind(this));
+                    break;
+                case 'json':
+                    this.param.noResize = true;
+                    angular.extend(this.param, elemAttr, result);
+                    scope.$broadcast("window:contentLoaded", this);
+                    break;
+                case 'html':
+                    this.param.noResize = true;
+                    angular.extend(this.param, elemAttr);
+                    scope.$broadcast("window:contentLoaded", this);
+                    break;
+            };
         };
-
+        Content.prototype.getImage = function (link, callback) {
+            var img = new Image(), newSizes;
+            img.onload = function () {
+                angular.extend(this, {
+                    oric_height: img.height,
+                    oric_width: img.width,
+                    src: link,
+                    el: img
+                });
+                this.ratio = this.oric_width / this.oric_height;
+                newSizes = win.getNewSize(this);
+                this.width = this.el.width = newSizes[0];
+                this.height = this.el.height = newSizes[1];
+                callback(this);
+                img = null;
+            }.bind(this);
+            img.onerror = function () {
+                throw ("Картинки с таким адресом не существует!");
+            };
+            img.src = link;
+        };
         var getUnicId = function () {
             return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         };
