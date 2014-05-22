@@ -148,22 +148,16 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
         window.getPrev();
     };
 
+    $scope.fullScreen = function () {
+        window.fullScreen();
+    };
+
     /*
     * Пользовательская обработка результата при подгрузки картинки
      */
-    window.bind("window:userImageLoaded", function (e, item, sectors) {
-        console.log("asdas");
-        var content = sectors.content.el, img = item.img.el;
-        content.html('').append(img);
-        $scope.inner.show = true;
+    window.bind("window:userControll", function (e, item, sectors, response) {
+        console.log(item);
     });
-
-    window.bind("window:userHtmlLoaded", function (e, item, sectors) {
-        var content = sectors.content.el;
-        content.html(item.el);
-        $scope.inner.show = true;
-    });
-
 } ]);
 
 //style="width: {{inner.width || 0}}px; height: {{inner.height || 0}}px; {{inner.padding}}"

@@ -10,9 +10,6 @@ var popup = angular.module("popupWindow", []);
 popup.factory("templateCache", ["$cacheFactory", function ($cacheFactory) {
     return $cacheFactory("template-cache");
 }]);
-popup.value("errorsString", {
-    noimage: "Битый адрес картинки"
-});
 popup.value("windowSectors", {
     inner: {el: null},
     wrap: {el: null},
@@ -84,6 +81,12 @@ popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
                     el: elem,
                     loaded: true
                 };
+                elem.on('click', function (e) {
+                    var target = e.target;
+                    if (target.id === "wrap-inner"){
+                        scope.$emit("window:close");
+                    }
+                });
             });
         }
     };
@@ -138,16 +141,15 @@ popup.factory("$popupWindow", [
     "$interval",
     "$http",
     "$compile",
-    "errorsString",
     "windowSectors",
     "$timeout",
     "$location",
     "$winStorage",
     "$rootElement",
     "templateCache",
-    function ($rootScope, $window, $document, $interval, $http, $compile, errorsString, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache) {
+    function ($rootScope, $window, $document, $interval, $http, $compile, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache) {
         "use strict";
-        var win, scope, sizes, elemAttr, def, config, $W = angular.element($window);
+        var win, scope, sizes, elemAttr, def, config, $W = angular.element($window), response;
         var Window = function (settings) {
             if (!(this instanceof Window)) {
                 return new Window(settings);
@@ -202,6 +204,7 @@ popup.factory("$popupWindow", [
             sizes = null;
             elemAttr = {};
             config = null;
+            response = null;
             angular.extend(this.config, def, settings);
             config = this.config;
             scope.$on("window:navigate", this._windowPagination.bind(this));//листалка
@@ -225,6 +228,10 @@ popup.factory("$popupWindow", [
                     }
                 }
             }
+            //Закрытие окна при клике вне его
+            scope.$on("window:close", function () {
+                this.closeWindow();
+            }.bind(this));
         };
         Window.prototype = {
             //Открывает окно
@@ -293,8 +300,11 @@ popup.factory("$popupWindow", [
             },
             //Дефолтовое состояние окна
             _defaultWindow: function () {
+                var group = this.setElements[this.group];
                 sizes = this.sizes = this.getTrueWindowSize();
                 var winpopup = {
+                    counter: group ? group.length : 0,
+                    index: this.index + 1,
                     inner: {
                         padding: config.margin + 'px 0 ' + config.margin + 'px 0',
                         width: sizes.pageWidth,
@@ -333,6 +343,7 @@ popup.factory("$popupWindow", [
                 }
                 ;
             },
+            //Пагинация
             _windowPagination: function (e, elem, act, param) {
                 switch (act) {
                     case 'next':
@@ -354,6 +365,7 @@ popup.factory("$popupWindow", [
                 //Новая картинка
                 $timeout(function () {
                     this._loadContent();
+                    scope.winpopup.index = this.index + 1;
                 }.bind(this), 600);
             },
             _loadContent: function () {
@@ -369,6 +381,7 @@ popup.factory("$popupWindow", [
                             return this.toParam(data);
                         }.bind(this);
                         $http(config.ajax).success(function (data, status) {
+                                response = data;
                                 if (data instanceof Object) {//если вернули json
                                     if (data.src) {
                                         new Content(this.el, 'image', data);
@@ -435,7 +448,7 @@ popup.factory("$popupWindow", [
                     scope.winpopup.navigation = nav;
                 }
                 if (config.userControl) {//Пользовательское управление
-                    //this._trigger("window:userImageLoaded", object, windowSectors);
+                    this._trigger("window:userControll", object, windowSectors, response);
                 } else {
                     scope.winpopup.inner.show = true;
                     this._updateUrl();
@@ -447,7 +460,7 @@ popup.factory("$popupWindow", [
                     windowSectors.wrap.el.removeClass("win-close").addClass("win-show");
                 }, 50);
                 this.body.style.overflow = "hidden";
-                this._trigger("window:afterContentLoaded", this.currContent, windowSectors);
+                this._trigger("window:afterContentLoaded", this.currContent, windowSectors, response);
             },
             bind: function (event, handler) {
                 var name = event + ":" + this.timestamp;
@@ -613,6 +626,10 @@ popup.factory("$popupWindow", [
                     var prev = this.setElements[this.group][this.index - 1];
                     scope.$emit("window:navigate", prev.el, 'prev', param || {});
                 }
+            },
+            //Полноэкранный режим
+            fullScreen: function () {
+                windowSectors.wrap.el[0].webkitRequestFullscreen();
             },
             data: {
             }
