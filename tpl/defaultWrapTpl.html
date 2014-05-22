@@ -7,9 +7,10 @@
         <a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед</a>
     </div>
     <div id="content" data-window-section="content">
-        <a ng-click="prev()" ng-show="winpopup.navigation.prev">Назад</a>
-        <img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}"
-             height="{{winpopup.content.height}}"/>
+        <div id="fullScreen" data-window-section="fullscreen">
+            <a class="full-managment cancel" ng-show="winpopup.fullscreen" ng-click="cancelFullScreen()">Обычный вид</a>
+            <img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}"/>
+        </div>
     </div>
 
     <div id="window-footer" data-window-section="footer">

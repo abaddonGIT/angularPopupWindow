@@ -152,6 +152,10 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
         window.fullScreen();
     };
 
+    $scope.cancelFullScreen = function () {
+        window.cancelFullScreen();
+    }
+
     /*
     * Пользовательская обработка результата при подгрузки картинки
      */

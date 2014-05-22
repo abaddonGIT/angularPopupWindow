@@ -121,6 +121,21 @@ body {
     opacity: 1;
 }
 
+#fullScreen {
+}
+
+.full-managment {
+    position: absolute;
+}
+
+.full-managment.cancel {
+    font-weight: bold;
+    font-size: 18px;
+    z-index: 5;
+    right: 50px;
+    top: 50px;
+    color: #fff;
+}
 
 #wrap-inner {
     overflow-y: auto;

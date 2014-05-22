@@ -15,7 +15,8 @@ popup.value("windowSectors", {
     wrap: {el: null},
     header: {el: null},
     content: {el: null},
-    footer: {el: null}
+    footer: {el: null},
+    fullscreen: {el: null}
 });
 popup.directive("popupWindow", ['$popupWindow', function ($popupWindow) {
     return {
@@ -59,6 +60,9 @@ popup.directive("windowSection", ['$popupWindow', 'windowSectors', function ($po
             case 'wrap':
                 windowSectors.wrap = {el: elem};
                 break;
+            case 'fullscreen':
+                windowSectors.fullscreen = {el: elem};
+                break;
         }
         ;
     };
@@ -83,7 +87,7 @@ popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
                 };
                 elem.on('click', function (e) {
                     var target = e.target;
-                    if (target.id === "wrap-inner"){
+                    if (target.id === "wrap-inner") {
                         scope.$emit("window:close");
                     }
                 });
@@ -133,7 +137,70 @@ popup.factory("$winStorage", ["$window", "$location", function ($window, $locati
         clear: clear
     };
 }]);
+/*
+ * FullScreen api
+ */
+popup.factory("$fullScreen", ['$document', '$rootScope', function ($document, $rootScope) {
+    var d = $document[0];
+    var open = function (elem) {
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.mozRequestFullScreen) {
+            elem.mozRequestFullScreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+    };
+    var cancel = function () {
+        if (d.exitFullscreen) {
+            d.exitFullscreen();
+        }
+        else if (d.mozCancelFullScreen) {
+            d.mozCancelFullScreen();
+        }
+        else if (d.webkitCancelFullScreen) {
+            d.webkitCancelFullScreen();
+        }
+        else if (d.msExitFullscreen) {
+            d.msExitFullscreen();
+        }
+    };
+    var addEvent = function () {
+        if (d.fullscreenEnabled) {
+            d.addEventListener("fullscreenchange", function () {
+                if (!d.fullScreen) {
 
+                }
+            }, false);
+        } else if (d.mozFullScreenEnabled) {
+            d.addEventListener("mozfullscreenchange", function () {
+                if (!d.mozFullScreen) {
+
+                }
+            }, false);
+        } else if (d.webkitFullscreenEnabled) {
+            d.addEventListener("webkitfullscreenchange", function () {
+                if (!d.webkitIsFullScreen) {
+                    $rootScope.$emit("window:fullScreenClose");
+                }
+            }, false);
+        } else if (d.msFullscreenEnabled) {
+            d.addEventListener("msfullscreenchange", function () {
+                if (!d.msFullscreenElement) {
+
+                }
+            }, false);
+        }
+    };
+
+    return {
+        openFullScreen: open,
+        cancelFullScreen: cancel,
+        fullScreeEvent: addEvent
+    };
+}]);
 popup.factory("$popupWindow", [
     "$rootScope",
     "$window",
@@ -147,7 +214,8 @@ popup.factory("$popupWindow", [
     "$winStorage",
     "$rootElement",
     "templateCache",
-    function ($rootScope, $window, $document, $interval, $http, $compile, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache) {
+    "$fullScreen",
+    function ($rootScope, $window, $document, $interval, $http, $compile, windowSectors, $timeout, $location, $winStorage, $rootElement, templateCache, $fullScreen) {
         "use strict";
         var win, scope, sizes, elemAttr, def, config, $W = angular.element($window), response;
         var Window = function (settings) {
@@ -207,11 +275,14 @@ popup.factory("$popupWindow", [
             response = null;
             angular.extend(this.config, def, settings);
             config = this.config;
+
             scope.$on("window:navigate", this._windowPagination.bind(this));//листалка
             scope.$on("window:imageLoaded", this._windowImageLoaded.bind(this));//После разбора и создания объекта отображения, который включает в себя изображение
             scope.$on("window:contentLoaded", this._windowContentLoaded.bind(this));//После создания объекта отображения, который представляет из себя просто кусок html-кода
-            scope.windowStart = this;
-            scope.loadWindowTemp = this;
+            this.root.$on("window:fullScreenClose", function () {
+                this.cancelFullScreen();
+            }.bind(this));
+
             //При перезагрузке страницы
             if (this.pushState) {
                 var search = $location.search();
@@ -232,6 +303,11 @@ popup.factory("$popupWindow", [
             scope.$on("window:close", function () {
                 this.closeWindow();
             }.bind(this));
+            //Изменение отображения
+            $fullScreen.fullScreeEvent();
+
+            scope.windowStart = this;
+            scope.loadWindowTemp = this;
         };
         Window.prototype = {
             //Открывает окно
@@ -260,12 +336,12 @@ popup.factory("$popupWindow", [
                 }.bind(this));
 
                 //Ресайз окна
-                if (config.resize) {
-                    $W.on('resize', function () {
-                        this.currWrapWidth = null;
-                        this._windowResize();
-                    }.bind(this));
-                }
+                //if (config.resize) {
+                $W.on('resize', function () {
+                    this.currWrapWidth = null;
+                    this._windowResize();
+                }.bind(this));
+                //}
             },
             //Подгрузка области контента
             _loadInnerTpl: function (callback) {
@@ -358,6 +434,7 @@ popup.factory("$popupWindow", [
                     unicid: elem[0].getAttribute('unicid'),
                     win_id: elem[0].id
                 });
+
                 //Вычисляем реальные размеры для окна. но не применяем их дабы не было эффекта дергания
                 this.currWrapWidth = this.getWrapWidth();
                 windowSectors.wrap.el.removeClass("win-show").addClass("win-close");
@@ -412,14 +489,18 @@ popup.factory("$popupWindow", [
                 //текущая картинка
                 this.currContent = image;
                 scope.winpopup.content = image;
-                if (image.ratio < 1) {
-                    if (image.width <= config.minSizes.width) {
-                        scope.winpopup.wrap.width = config.minSizes.width;
+                if (config.resize) {
+                    if (image.ratio < 1) {
+                        if (image.width <= config.minSizes.width) {
+                            scope.winpopup.wrap.width = config.minSizes.width;
+                        } else {
+                            scope.winpopup.wrap.width = image.width;
+                        }
                     } else {
                         scope.winpopup.wrap.width = image.width;
                     }
                 } else {
-                    scope.winpopup.wrap.width = image.width;
+                    scope.winpopup.wrap.width = config.maxSizes.width;
                 }
                 //Пагинация
                 this.afterLoad(image);
@@ -484,10 +565,11 @@ popup.factory("$popupWindow", [
             },
             //Пересчет размеров окна
             _windowResize: function () {
-                var newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
                 sizes = this.getTrueWindowSize();
+                var newWinWidth = sizes.pageWidth, newWinHeight = sizes.viewHeight, newSizes = null, wrap = null;
                 scope.winpopup.inner.width = newWinWidth;
                 scope.winpopup.inner.height = newWinHeight;
+
                 if (config.resize) {
                     //Размер всплывающего окна
                     wrap = this.getWrapWidth();
@@ -505,6 +587,7 @@ popup.factory("$popupWindow", [
                         } else {
                             scope.winpopup.wrap.width = newSizes[0];
                         }
+
                         scope.winpopup.content.width = scope.winpopup.content.el.width = newSizes[0];
                         scope.winpopup.content.height = scope.winpopup.content.el.height = newSizes[1];
                     }
@@ -550,8 +633,11 @@ popup.factory("$popupWindow", [
                     'pageHeightScroll': yScroll
                 };
             },
-            getNewSize: function (item) {
+            getNewSize: function (item, fullsize) {
                 var wrapWidth = this.currWrapWidth || scope.winpopup.wrap.width, winHeight = sizes.viewHeight, result = {};
+                if (fullsize) {
+                    wrapWidth = sizes.pageWidth;
+                }
                 //Желаемые размеры картинки
                 var desiredWidth = wrapWidth, desiredHeight = winHeight - (config.margin * 2 + config.padding * 2);
 
@@ -629,7 +715,21 @@ popup.factory("$popupWindow", [
             },
             //Полноэкранный режим
             fullScreen: function () {
-                windowSectors.wrap.el[0].webkitRequestFullscreen();
+                //Размер картинки для полноэкранного режима
+                var newSizes = this.getNewSize(this.currContent, 1);
+                config.maxSizes = {
+                    width: newSizes[0],
+                    height: newSizes[1]
+                };
+                scope.winpopup.fullscreen = true;
+                $fullScreen.openFullScreen(windowSectors.fullscreen.el[0]);
+            },
+            //Отмена полноэкранного режима
+            cancelFullScreen: function () {
+                var elem = this.currContent;
+                config.maxSizes = elem.openConfig.maxSizes;
+                scope.winpopup.fullscreen = false;
+                $fullScreen.cancelFullScreen();
             },
             data: {
             }
@@ -639,7 +739,7 @@ popup.factory("$popupWindow", [
             angular.extend(this, {
                 unicid: elem[0].getAttribute("unicid") || getUnicId(),
                 win_id: elem[0].id,
-                openConfig: config
+                openConfig: angular.extend({}, config)
             });
             //Смотри что за элемент
             var tagName = elem[0].tagName, link;
@@ -687,7 +787,7 @@ popup.factory("$popupWindow", [
             angular.extend(this, {
                 unicid: elem[0].getAttribute("unicid") || getUnicId(),
                 win_id: elem[0].id,
-                openConfig: config,
+                openConfig: angular.extend({}, config),
                 param: {}
             });
             switch (type) {
@@ -708,7 +808,8 @@ popup.factory("$popupWindow", [
                     angular.extend(this.param, elemAttr);
                     scope.$broadcast("window:contentLoaded", this);
                     break;
-            };
+            }
+            ;
         };
         Content.prototype.getImage = function (link, callback) {
             var img = new Image(), newSizes;
