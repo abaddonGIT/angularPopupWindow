@@ -96,7 +96,7 @@ popup.directive("popupWrap", ['windowSectors', function (windowSectors) {
     };
 }]);
 /*
- * Шапка всплывающего окна
+ * Директивы для контента подгруженного как html кусок
  */
 popup.directive("imageIncontent", ['$popupWindow', '$http', '$compile', function ($popupWindow, $http, $compile) {
     return function (scope, elem, attr) {
@@ -661,6 +661,7 @@ popup.factory("$popupWindow", [
                     'pageHeightScroll': yScroll
                 };
             },
+            //Вычисляет размеры картинки
             getNewSize: function (item, fullsize) {
                 var wrapWidth = this.currWrapWidth || scope.winpopup.wrap.width, winHeight = sizes.viewHeight, result = {};
                 if (fullsize) {
@@ -726,7 +727,7 @@ popup.factory("$popupWindow", [
                     var next = this.setElements[this.group][this.index + 1];
                     if (!next) {
                         this.index = -1;
-                        next = this.setElements[this.group][this.index + 1];
+                        next = this.setElements[this.group][0];
                     }
                     scope.$emit("window:navigate", next.el, 'next', param || {});
                 }
@@ -747,6 +748,7 @@ popup.factory("$popupWindow", [
             },
             //Полноэкранный режим
             fullScreen: function () {
+                if (windowSectors.fullscreen && this.currContent.el.tagName === "IMG") {
                 //Размер картинки для полноэкранного режима
                 var newSizes = this.getNewSize(this.currContent, 1);
                 windowSectors.fullscreen.el.addClass("win-effect-1 win-show");
@@ -756,6 +758,7 @@ popup.factory("$popupWindow", [
                 };
                 scope.winpopup.fullscreen = true;
                 $fullScreen.openFullScreen(windowSectors.fullscreen.el[0]);
+                }
             },
             //Отмена полноэкранного режима
             cancelFullScreen: function () {
