@@ -21,7 +21,7 @@ body {
     backface-visibility: hidden;
 }
 
-#wrap-block.win-show, #wrap-block.win-close {
+#wrap-block.win-show, #wrap-block.win-close, #fullScreen.win-show, #fullScreen.win-close {
     visibility: visible;
 }
 
@@ -122,6 +122,16 @@ body {
 }
 
 #fullScreen {
+    width: 100%;
+    height: 100%;
+    background: none;
+    color: #fff;
+}
+
+#fullScreen #slideshow {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
 }
 
 .full-managment {
