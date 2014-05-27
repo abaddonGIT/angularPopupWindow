@@ -122,7 +122,8 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     innerTpl: 'tpl/jsonTpl.html',
                     dataRequest: {
                         title: 'Простой ответ JSON',
-                        description: 'Полученные значения просто записываются в скоп'
+                        description: 'Полученные значения просто записываются в скоп',
+                        type: 'json'
                     }
                 });
                 break;
@@ -174,5 +175,3 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
         console.log(item);
     });
 } ]);
-
-//style="width: {{inner.width || 0}}px; height: {{inner.height || 0}}px; {{inner.padding}}"
