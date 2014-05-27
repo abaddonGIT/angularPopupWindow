@@ -80,7 +80,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
 }]);
 </pre>
                 <b>Параметры вызова:</b>
-                <ol>
+                <ul>
                     <li><b>resize</b> - нужен ли резайз окна в зависимости от разрешения монитора (true - default,
                         false)
                     </li>
@@ -111,7 +111,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     <li><b>userControl</b> - если эта опция подключена то вставка полученного контента ложится на
                         пользователя (В этом случаи все действия с полученным контентом выполняются через событие <b>window:userControll</b>)
                     </li>
-                </ol>
+                </ul>
             </li>
         </ul>
 </ol>
