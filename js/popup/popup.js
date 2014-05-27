@@ -111,14 +111,22 @@ popup.directive("htmlContent", ['$popupWindow', '$http', '$compile', function ($
     };
 }]);
 /*
- * Сохранение данных в localStorage
+ * Сохранение конфига вызова окна в localStorage
  */
 popup.factory("$winStorage", ["$window", "$location", function ($window, $location) {
     //Сохраняет объект в хранилище
     var setItem = function (item) {
-        //console.log(item.openConfig);
         var config = JSON.stringify(item.openConfig, function (key, value) {
-            if (key == 'el') return undefined;
+            switch (key) {
+                case 'el':
+                    return undefined;
+                    break;
+                case 'beforeContentLoaded':
+                case 'beforePagination':
+                case 'afterContentLoaded':
+                    return value.toString();
+                    break;
+            }
             return value;
         });
         localStorage.setItem(item.win_id, config);
@@ -459,7 +467,7 @@ popup.factory("$popupWindow", [
                 } else {
                     windowSectors.fullscreen.el.removeClass("win-show").addClass("win-close");
                 }
-                this._trigger("window:beforePagination", elem, windowSectors);
+                this._callEvent("beforePagination", elem, windowSectors);
                 //Новая картинка
                 $timeout(function () {
                     this._loadContent();
@@ -467,7 +475,7 @@ popup.factory("$popupWindow", [
                 }.bind(this), 600);
             },
             _loadContent: function () {
-                this._trigger("window:beforeContentLoaded", windowSectors);
+                this._callEvent("beforeContentLoaded", config, windowSectors);
                 elemAttr = config.dataRequest || {};
                 switch (config.winType) {
                     case 'image'://Для картинки без ajax-са
@@ -503,6 +511,18 @@ popup.factory("$popupWindow", [
                             new Content(elem, 'html');
                         });
                         break;
+                }
+            },
+            _callEvent: function (name, first, second, third) {
+                //Общее событие для всех вызовов
+                this._trigger("window:" + name, first, second, third);
+                //Событие для отдельного окна
+                if (config[name]) {
+                    if (typeof config[name] === "string") {
+                        new Function('first', 'second', 'third', 'call = ' + config[name] + '; return call(first, second);')(first, second, third);
+                    } else {
+                        config[name](first, second, third);
+                    }
                 }
             },
             //Постройка контента окна для типа image
@@ -566,7 +586,7 @@ popup.factory("$popupWindow", [
                     }
                 }, 50);
                 this.body.style.overflow = "hidden";
-                this._trigger("window:afterContentLoaded", this.currContent, windowSectors, response);
+                this._callEvent('afterContentLoaded', this.currContent, windowSectors, response);
             },
             bind: function (event, handler) {
                 var name = event + ":" + this.timestamp;
@@ -764,7 +784,7 @@ popup.factory("$popupWindow", [
                     tpl = templateCache.get(config.fullScreenTpl);
 
                 if (!fl && !tpl) {
-                    $http.post('tpl/fullScreenTpl.html').success(function (data) {
+                    $http.post(config.fullScreenTpl).success(function (data) {
                         windowSectors.fullscreen.el.html(data);
                         var content = windowSectors.fullscreen.el.contents();
                         $compile(content)(scope);

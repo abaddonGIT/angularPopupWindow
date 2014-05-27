@@ -64,7 +64,6 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
         }
     ];
 
-
     var window = $scope.popup = $popupWindow.init({
         scope: $scope
     });
@@ -81,6 +80,15 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     dataRequest: {
                         title: "test",
                         description: "ololosha"
+                    },
+                    beforeContentLoaded: function (config, sectors) {
+                        config.dataRequest.description = "Это штуковина работает!!!!";
+                    },
+                    beforePagination: function (item, sectors) {
+                        console.log(item);
+                    },
+                    afterContentLoaded: function (content, sectors, response) {
+                        console.log(content);
                     }
                 });
                 break;
@@ -90,6 +98,9 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     winType: 'ajax',
                     dataRequest: {
                         id: target.getAttribute('name')
+                    },
+                    beforeContentLoaded: function (config, sectors) {
+                        console.log(sectors);
                     }
                 });
                 break;
