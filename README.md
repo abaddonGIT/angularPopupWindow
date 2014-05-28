@@ -207,13 +207,24 @@ $scope.cancelFullScreen = function () {
     <li>
         <b>imageIncontent</b> - необходима если внутри html кода есть изображение которое должно резайзится в зависимости от размера окна
         <pre>
-            &lt;img src="img/001.jpg" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}" alt="" data-image-incontent /&gt;
+&lt;img src="img/001.jpg" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}" alt="" data-image-incontent /&gt;
         </pre>
     </li>
     <li>
         <b>htmlContent</b> - просто html контент. Директива соберет контент в объект
         <pre>
-            &lt;div data-html-content&gt;&lt;b&gt;Тут обычный html код&lt;/b&gt;&lt;/div&gt;
+&lt;div data-html-content&gt;&lt;b&gt;Тут обычный html код&lt;/b&gt;&lt;/div&gt;
         </pre>
     </li>
+</ul>
+Если от сервера ожидается ответ в формате <b>json</b> и при этом сохраняет ся необходимость в ресайзе изображения, то в ответе должен сожержаться параметер <b>src</b> - с адресом картинки
+<pre>
+$outer = array(
+    'src' => "img/001.jpg",
+    'id' => $_POST['id'],
+    'title' => 'Картинка из json №' . $_POST['id'],
+    'description' => 'amet laoreet.<b>' . $_POST['id'] . '</b> Nulla tempus ipsum sed nisl mattis congue. Dui'
+);
+return json_encode($outer);
+</pre>
 </ol>
