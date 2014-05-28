@@ -79,7 +79,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
     };
 }]);
 </pre>
-                <b>Параметры вызова:</b>
+                <b>Параметры вызова окна:</b>
                 <ul>
                     <li><b>resize</b> - нужен ли резайз окна в зависимости от разрешения монитора (true - default,
                         false)
@@ -107,11 +107,124 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                         окна, для типа image, либо будут добавлены к запросу, для типа ajax (Пример: {title: "Ежик в
                         тумане"})
                     </li>
+                    <li><b>pushState</b> - Если стоит true, то для открытого окна будет формироваться url, который позволит востановить его после обновления страницы (Это будет работать при условии, что у элемента на, котором было вызвано окно имеет уникальный аттрибут <b>id</b>)</li>
                     <li><b>effect</b> - Эффект открытия окна (так же распостраняется и на пагинацию. От 1 до 5)</li>
                     <li><b>userControl</b> - если эта опция подключена то вставка полученного контента ложится на
                         пользователя (В этом случаи все действия с полученным контентом выполняются через событие <b>window:userControll</b>)
                     </li>
+                    <li><b>beforeContentLoaded</b> - ф-я которая отрабатывает перед получением контента и его вставки в окно (ф-я получает объект вызыва и объекты секторов окна)</li>
+                    <li><b>beforePagination</b> - ф-я отрабатывает перед перелистыванием между картинками (ф-я получает объект слудующего элемента и объекты секторов окна)</li>
+                    <li><b>afterContentLoaded</b> - ф-я отрабатывает после прогрузки и вставки контента в окно (ф-я получает текущий объект, объекты секторов окна и сырой результат запроса)</li>
                 </ul>
-            </li>
+                <b>Методы объекта окна:</b>
+                <ul>
+                    <li><b>open</b> - открывает окно, ожидает в качестве параметра объект настроек описаных выше</li>
+                    <li><b>closeWindow</b> - закрывает окно</li>
+                    <li><b>getNext</b> - следующий слайд</li>
+                    <li><b>getPrev</b> - предыдущий слайд</li>
+                    <li><b>fullScreen</b> - полноэкранный режим</li>
+                    <li><b>cancelFullScreen</b> - закрытие полноэкранного режима</li>
+                </ul>
+                <pre>
+window.open({
+    el: angular.element(target),
+    winType: 'ajax',
+    innerTpl: 'tpl/jsonTpl.html',
+    dataRequest: {
+        title: 'Простой ответ JSON',
+        description: 'Полученные значения просто записываются в скоп',
+        type: 'json'
+    }
+});
+$scope.close = function () {
+    window.closeWindow();
+};
+//Вперед
+$scope.next = function () {
+    window.getNext();
+};
+//Назад
+$scope.prev = function () {
+    window.getPrev();
+};
+                
+$scope.fullScreen = function () {
+    window.fullScreen();
+};
+                
+$scope.cancelFullScreen = function () {
+    window.cancelFullScreen();
+};
+                </pre>
+                <b>Как это выглядит в шаблоне (Пример innerTpl - defaultWrapTpl.html):</b>
+                <pre>
+&lt;div id="window-styled-block"&gt;
+    &lt;div id="window-header" data-window-section="header"&gt;
+        &lt;b>{{winpopup.content.param.title}}&lt;/b&gt;
+        &lt;a ng-click="close()" class="close">Закрыть&lt;/a&gt;
+        &lt;a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад&lt;/a&gt;
+        &lt;a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед&lt;/a&gt;
+    &lt;/div&gt;
+    &lt;div id="content" data-window-section="content"&gt;
+        &lt;img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}"
+             height="{{winpopup.content.height}}"/&gt;
+    &lt;/div&gt;
+
+    &lt;div id="window-footer" data-window-section="footer"&gt;
+        {{winpopup.content.param.description}}
+        &lt;h3>({{winpopup.index}} из {{winpopup.counter}})&lt;/h3&gt;
+        &lt;a ng-click="fullScreen()"&gt;Полноэкранный режим&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div>
+</pre>
+В этом шаблоне также представляет интерес директива <b>data-window-section</b> Она создана для того, чтобы хранить ссылки на соответствующие разделы окна и получения к ним доступа. Именно эти сектора возвращаются во всех ф-ях обратного вызова.
+Её использование не обязательно, кроме одного случая, когда вы получаете со стороны сервера готовый html-кусок, то он будет вставлен в блок <b>data-window-section="content"</b> (Ну разумеется если вы при вызове указали <b>userControl</b> - true, то вы можете вообще обойтись без этой директивы и вставлять полученный от сервера результат куда угодно).
+Так же для шаблонов есть ряд зарезервированных переменных, которые будут созданы в scope-пе. Вот они:
+            <ul>
+                <li><b>winpopup.counter</b> - Показывает общее кол-во элементов с одной и той же группой</li>
+                <li><b>winpopup.index</b> - Позиция элемента в коллекции</li>
+                <li><b>winpopup.navigation.prev</b> - показывает есть ли предыдущий элемент</li>
+                <li><b>winpopup.navigation.next</b> - показывает есть ли следующий элемент</li>
+                <li><b>winpopup.content.param</b> - Сюда будут попадать все параметры переданные через параметр <b>dataRequest</b> или те, которые получет скрипт от сервера (если ответ возвращается в формате <b>json</b>)</li>
+                <li><b>winpopup.content.width, winpopup.content.height, winpopup.content.src</b> - эти переменные будут доступны в том случаи если в окне присутствует изображение, размер которого динамически меняется в зависимости от размера окна</li>
+                <li><b>winpopup.slideshow</b> - в полноэкранном режиме отвечает за слайдшоу</li>
+            </ul>
         </ul>
+        <b>Пример шаблона для полноэкранного просмотра:</b>
+        <pre>
+&lt;h3&gt;({{winpopup.index}} из {{winpopup.counter}})&lt;/h3&gt;
+&lt;a class="full-managment cancel" ng-click="cancelFullScreen()">Обычный вид&lt;/a&gt;
+&lt;a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад&lt;/a&gt;
+&lt;a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед&lt;/a&gt;
+&lt;label id="slideshow" for="slides">&lt;input id="slides" type="checkbox" ng-model="winpopup.slideshow"/&gt;Показ
+    слайдов&lt;/label&gt;
+&lt;div class="fullScreenImage"&gt;
+    &lt;img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}"/&gt;
+&lt;/div&gt;
+</pre>
+Так же имеется две вспомогательные директивы для контента который был подгружен как обычный html - кусок:
+<ul>
+    <li>
+        <b>imageIncontent</b> - необходима если внутри html кода есть изображение которое должно резайзится в зависимости от размера окна
+        <pre>
+&lt;img src="img/001.jpg" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}" alt="" data-image-incontent /&gt;
+        </pre>
+    </li>
+    <li>
+        <b>htmlContent</b> - просто html контент. Директива соберет контент в объект
+        <pre>
+&lt;div data-html-content&gt;&lt;b&gt;Тут обычный html код&lt;/b&gt;&lt;/div&gt;
+        </pre>
+    </li>
+</ul>
+Если от сервера ожидается ответ в формате <b>json</b> и при этом сохраняет ся необходимость в ресайзе изображения, то в ответе должен сожержаться параметер <b>src</b> - с адресом картинки
+<pre>
+$outer = array(
+    'src' => "img/001.jpg",
+    'id' => $_POST['id'],
+    'title' => 'Картинка из json №' . $_POST['id'],
+    'description' => 'amet laoreet.<b>' . $_POST['id'] . '</b> Nulla tempus ipsum sed nisl mattis congue. Dui'
+);
+return json_encode($outer);
+</pre>
 </ol>
