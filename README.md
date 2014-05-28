@@ -107,6 +107,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                         окна, для типа image, либо будут добавлены к запросу, для типа ajax (Пример: {title: "Ежик в
                         тумане"})
                     </li>
+                    <li><b>pushState</b> - Если стоит true, то для открытого окна будет формироваться url, который позволит востановить его после обновления страницы (Это будет работать при условии, что у элемента на, котором было вызвано окно имеет уникальный аттрибут <b>id</b>)</li>
                     <li><b>effect</b> - Эффект открытия окна (так же распостраняется и на пагинацию. От 1 до 5)</li>
                     <li><b>userControl</b> - если эта опция подключена то вставка полученного контента ложится на
                         пользователя (В этом случаи все действия с полученным контентом выполняются через событие <b>window:userControll</b>)
@@ -201,4 +202,18 @@ $scope.cancelFullScreen = function () {
     &lt;img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}"/&gt;
 &lt;/div&gt;
 </pre>
+Так же имеется две вспомогательные директивы для контента который был подгружен как обычный html - кусок:
+<ul>
+    <li>
+        <b>imageIncontent</b> - необходима если внутри html кода есть изображение которое должно резайзится в зависимости от размера окна
+        <pre>
+            &lt;img src="img/001.jpg" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}" alt="" data-image-incontent /&gt;
+        </pre>
+    </li>
+    <li>
+        <b>htmlContent</b> - просто html контент. Директива соберет контент в объект
+        <pre>
+            &lt;div data-html-content&gt;&lt;b&gt;Тут обычный html код&lt;/b&gt;&lt;/div&gt;
+        </pre>
+    </li>
 </ol>
