@@ -157,24 +157,24 @@ $scope.cancelFullScreen = function () {
                 </pre>
                 <b>Как это выглядит в шаблоне (Пример innerTpl - defaultWrapTpl.html):</b>
                 <pre>
-<div id="window-styled-block">
-    <div id="window-header" data-window-section="header">
-        <b>{{winpopup.content.param.title}}</b>
-        <a ng-click="close()" class="close">Закрыть</a>
-        <a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад</a>
-        <a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед</a>
-    </div>
-    <div id="content" data-window-section="content">
-        <img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}"
-             height="{{winpopup.content.height}}"/>
-    </div>
+&lt;div id="window-styled-block"&gt;
+    &lt;div id="window-header" data-window-section="header"&gt;
+        &lt;b>{{winpopup.content.param.title}}&lt;/b&gt;
+        &lt;a ng-click="close()" class="close">Закрыть&lt;/a&gt;
+        &lt;a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад&lt;/a&gt;
+        &lt;a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед&lt;/a&gt;
+    &lt;/div&gt;
+    &lt;div id="content" data-window-section="content"&gt;
+        &lt;img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}"
+             height="{{winpopup.content.height}}"/&gt;
+    &lt;/div&gt;
 
-    <div id="window-footer" data-window-section="footer">
+    &lt;div id="window-footer" data-window-section="footer"&gt;
         {{winpopup.content.param.description}}
-        <h3>({{winpopup.index}} из {{winpopup.counter}})</h3>
-        <a ng-click="fullScreen()">Полноэкранный режим</a>
-    </div>
-</div>
+        &lt;h3>({{winpopup.index}} из {{winpopup.counter}})&lt;/h3&gt;
+        &lt;a ng-click="fullScreen()"&gt;Полноэкранный режим&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div>
                 </pre>
         </ul>
 </ol>
