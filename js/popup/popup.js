@@ -334,7 +334,10 @@ popup.factory("$popupWindow", [
         Window.prototype = {
             //Открывает окно
             open: function (settings) {
-                var locSettings = {};
+                var locSettings = {
+                    innerTplMark: settings.innerTpl ? settings.innerTpl.replace(/[\/,\.]/g,'__') : def.innerTpl.replace(/[\/,\.]/g,'__'),
+                    fullScreenTplMark: settings.fullScreenTpl ? settings.fullScreenTpl.replace(/[\/,\.]/g,'__') : def.fullScreenTpl.replace(/[\/,\.]/g,'__')
+                };
                 //Строим конфиг текущего элемента
                 angular.extend(locSettings, def, settings);
                 //настройки
@@ -369,11 +372,13 @@ popup.factory("$popupWindow", [
             //Подгрузка области контента
             _loadInnerTpl: function (callback) {
                 if (config.innerTpl) {
-                    var tpl = templateCache.get(config.innerTpl), fl = windowSectors.wrap.el[0].querySelector('div');
+                    var tpl = templateCache.get(config.innerTpl), fl = windowSectors.wrap.el[0].querySelector('[mark=' + config.innerTplMark + ']');
                     if (!tpl && !fl) {
                         $http.post(config.innerTpl).success(function (data) {
                             windowSectors.wrap.el.html(data);
                             var content = windowSectors.wrap.el.contents();
+                            //Помечаем шаблон
+                            content.attr('mark', config.innerTplMark);
                             //Добавляем метку к блоку
                             $compile(content)(this.scope);
                             templateCache.put(config.innerTpl, data);
@@ -780,13 +785,14 @@ popup.factory("$popupWindow", [
                     }
                 });
                 //Подгрузка шаблона для полноэкранного вывода
-                var fl = windowSectors.fullscreen.el[0].querySelector('div'),
+                var fl = windowSectors.fullscreen.el[0].querySelector('[mark=' + config.fullScreenTplMark + ']'),
                     tpl = templateCache.get(config.fullScreenTpl);
 
                 if (!fl && !tpl) {
                     $http.post(config.fullScreenTpl).success(function (data) {
                         windowSectors.fullscreen.el.html(data);
                         var content = windowSectors.fullscreen.el.contents();
+                        content[0].setAttribute('mark', config.fullScreenTplMark);
                         $compile(content)(scope);
                         templateCache.put(config.fullScreenTpl, data);
                     });
