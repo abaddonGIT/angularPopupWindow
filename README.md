@@ -79,7 +79,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
     };
 }]);
 </pre>
-                <b>Параметры вызова:</b>
+                <b>Параметры вызова окна:</b>
                 <ul>
                     <li><b>resize</b> - нужен ли резайз окна в зависимости от разрешения монитора (true - default,
                         false)
@@ -115,6 +115,36 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     <li><b>beforePagination</b> - ф-я отрабатывает перед перелистыванием между картинками (ф-я получает объект слудующего элемента и объекты секторов окна)</li>
                     <li><b>afterContentLoaded</b> - ф-я отрабатывает после прогрузки и вставки контента в окно (ф-я получает текущий объект, объекты секторов окна и сырой результат запроса)</li>
                 </ul>
+                <b>Методы объекта окна:</b>
+                <ul>
+                    <li><b>open</b> - открывает окно, ожидает в качестве параметра объект настроек описаных выше</li>
+                    <li><b>closeWindow</b> - закрывает окно</li>
+                    <li><b>getNext</b> - следующий слайд</li>
+                    <li><b>getPrev</b> - предыдущий слайд</li>
+                    <li><b>fullScreen</b> - полноэкранный режим</li>
+                    <li><b>cancelFullScreen</b> - закрытие полноэкранного режима</li>
+                </ul>
+                <pre>
+                    $scope.close = function () {
+                        window.closeWindow();
+                    };
+                    //Вперед
+                    $scope.next = function () {
+                        window.getNext();
+                    };
+                    //Назад
+                    $scope.prev = function () {
+                        window.getPrev();
+                    };
+                
+                    $scope.fullScreen = function () {
+                        window.fullScreen();
+                    };
+                
+                    $scope.cancelFullScreen = function () {
+                        window.cancelFullScreen();
+                    }
+                </pre>
             </li>
         </ul>
 </ol>
