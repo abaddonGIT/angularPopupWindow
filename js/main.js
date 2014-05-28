@@ -1,5 +1,5 @@
 var app = angular.module("app", ['popupWindow']);
-app.controller("baseController", ['$scope', '$document', '$popupWindow', function ($scope, $document, $popupWindow) {
+app.controller("baseController", ['$scope', '$document', '$popupWindow', '$compile', function ($scope, $document, $popupWindow, $compile) {
 
     $scope.images = [
         {
@@ -124,7 +124,8 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                         title: 'Простой ответ JSON',
                         description: 'Полученные значения просто записываются в скоп',
                         type: 'json'
-                    }
+                    },
+                    userControl: true
                 });
                 break;
         };
@@ -173,5 +174,6 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
      */
     window.bind("window:userControll", function (e, item, sectors, response) {
         console.log(item);
+        $scope.winpopup.inner.show = true;
     });
 } ]);
