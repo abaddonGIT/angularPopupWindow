@@ -175,6 +175,30 @@ $scope.cancelFullScreen = function () {
         &lt;a ng-click="fullScreen()"&gt;Полноэкранный режим&lt;/a&gt;
     &lt;/div&gt;
 &lt;/div>
-                </pre>
+</pre>
+В этом шаблоне также представляет интерес директива <b>data-window-section</b> Она создана для того, чтобы хранить ссылки на соответствующие разделы окна и получения к ним доступа. Именно эти сектора возвращаются во всех ф-ях обратного вызова.
+Её использование не обязательно, кроме одного случая, когда вы получаете со стороны сервера готовый html-кусок, то он будет вставлен в блок <b>data-window-section="content"</b> (Ну разумеется если вы при вызове указали <b>userControl</b> - true, то вы можете вообще обойтись без этой директивы и вставлять полученный от сервера результат куда угодно).
+Так же для шаблонов есть ряд зарезервированных переменных, которые будут созданы в scope-пе. Вот они:
+            <ul>
+                <li><b>winpopup.counter</b> - Показывает общее кол-во элементов с одной и той же группой</li>
+                <li><b>winpopup.index</b> - Позиция элемента в коллекции</li>
+                <li><b>winpopup.navigation.prev</b> - показывает есть ли предыдущий элемент</li>
+                <li><b>winpopup.navigation.next</b> - показывает есть ли следующий элемент</li>
+                <li><b>winpopup.content.param</b> - Сюда будут попадать все параметры переданные через параметр <b>dataRequest</b> или те, которые получет скрипт от сервера (если ответ возвращается в формате <b>json</b>)</li>
+                <li><b>winpopup.content.width, winpopup.content.height, winpopup.content.src</b> - эти переменные будут доступны в том случаи если в окне присутствует изображение, размер которого динамически меняется в зависимости от размера окна</li>
+                <li><b>winpopup.slideshow</b> - в полноэкранном режиме отвечает за слайдшоу</li>
+            </ul>
         </ul>
+        <b>Пример шаблона для полноэкранного просмотра:</b>
+        <pre>
+&lt;h3&gt;({{winpopup.index}} из {{winpopup.counter}})&lt;/h3&gt;
+&lt;a class="full-managment cancel" ng-click="cancelFullScreen()">Обычный вид&lt;/a&gt;
+&lt;a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад&lt;/a&gt;
+&lt;a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед&lt;/a&gt;
+&lt;label id="slideshow" for="slides">&lt;input id="slides" type="checkbox" ng-model="winpopup.slideshow"/&gt;Показ
+    слайдов&lt;/label&gt;
+&lt;div class="fullScreenImage"&gt;
+    &lt;img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}" height="{{winpopup.content.height}}"/&gt;
+&lt;/div&gt;
+</pre>
 </ol>
