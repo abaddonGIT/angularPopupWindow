@@ -125,25 +125,25 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     <li><b>cancelFullScreen</b> - закрытие полноэкранного режима</li>
                 </ul>
                 <pre>
-                    $scope.close = function () {
-                        window.closeWindow();
-                    };
-                    //Вперед
-                    $scope.next = function () {
-                        window.getNext();
-                    };
-                    //Назад
-                    $scope.prev = function () {
-                        window.getPrev();
-                    };
+$scope.close = function () {
+    window.closeWindow();
+};
+//Вперед
+$scope.next = function () {
+    window.getNext();
+};
+//Назад
+$scope.prev = function () {
+    window.getPrev();
+};
                 
-                    $scope.fullScreen = function () {
-                        window.fullScreen();
-                    };
+$scope.fullScreen = function () {
+    window.fullScreen();
+};
                 
-                    $scope.cancelFullScreen = function () {
-                        window.cancelFullScreen();
-                    }
+$scope.cancelFullScreen = function () {
+    window.cancelFullScreen();
+}
                 </pre>
             </li>
         </ul>
