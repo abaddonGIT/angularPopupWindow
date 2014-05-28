@@ -495,9 +495,13 @@ popup.factory("$popupWindow", [
                                         new Content(this.el, 'json', data);
                                     }
                                 } else {
-                                    windowSectors.content.el.html(data);
-                                    var content = windowSectors.content.el.contents();
-                                    $compile(content)(scope);
+                                    if (config.userControl) {//Пользовательское управление
+                                        this._trigger("window:userControll", config, windowSectors, data);
+                                    } else {
+                                        windowSectors.content.el.html(data);
+                                        var content = windowSectors.content.el.contents();
+                                        $compile(content)(scope);
+                                    }
                                 }
                             }.bind(this)).error(function (data, status) {
                             throw ("При попытке получения данных произошел сбой!");
