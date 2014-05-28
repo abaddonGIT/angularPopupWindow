@@ -125,6 +125,16 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', functio
                     <li><b>cancelFullScreen</b> - закрытие полноэкранного режима</li>
                 </ul>
                 <pre>
+window.open({
+    el: angular.element(target),
+    winType: 'ajax',
+    innerTpl: 'tpl/jsonTpl.html',
+    dataRequest: {
+        title: 'Простой ответ JSON',
+        description: 'Полученные значения просто записываются в скоп',
+        type: 'json'
+    }
+});
 $scope.close = function () {
     window.closeWindow();
 };
@@ -143,8 +153,28 @@ $scope.fullScreen = function () {
                 
 $scope.cancelFullScreen = function () {
     window.cancelFullScreen();
-}
+};
                 </pre>
-            </li>
+                <b>Как это выглядит в шаблоне (Пример innerTpl - defaultWrapTpl.html):</b>
+                <pre>
+<div id="window-styled-block">
+    <div id="window-header" data-window-section="header">
+        <b>{{winpopup.content.param.title}}</b>
+        <a ng-click="close()" class="close">Закрыть</a>
+        <a ng-click="prev()" class="prev nav" ng-show="winpopup.navigation.prev">Назад</a>
+        <a ng-click="next()" class="next nav" ng-show="winpopup.navigation.next">Вперед</a>
+    </div>
+    <div id="content" data-window-section="content">
+        <img src="{{winpopup.content.src}}" alt="" width="{{winpopup.content.width}}"
+             height="{{winpopup.content.height}}"/>
+    </div>
+
+    <div id="window-footer" data-window-section="footer">
+        {{winpopup.content.param.description}}
+        <h3>({{winpopup.index}} из {{winpopup.counter}})</h3>
+        <a ng-click="fullScreen()">Полноэкранный режим</a>
+    </div>
+</div>
+                </pre>
         </ul>
 </ol>
