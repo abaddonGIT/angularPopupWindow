@@ -25,6 +25,11 @@ body {
     visibility: visible;
 }
 
+#wrap-inner {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 /*Эффекты*/
 [class*="win-effect-"] {
     -webkit-transition-property: -webkit-transform, opacity, visibility;

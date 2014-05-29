@@ -303,7 +303,7 @@ popup.factory("$popupWindow", [
                                 storageConfig.el = angular.element(el);
                                 this.open(storageConfig);
                             }
-                        }.bind(this), 0);
+                        }.bind(this), 1000);
                     }
                 }
             }
@@ -487,10 +487,14 @@ popup.factory("$popupWindow", [
                         new Img(this.el);
                         break;
                     case 'ajax'://подгрузка контента через ajax
-                        config.ajax.data = config.dataRequest;
-                        config.ajax.transformRequest = function (data) {
-                            return this.toParam(data);
-                        }.bind(this);
+                        if (config.ajax.method === "get") {
+                            config.ajax.params = config.dataRequest;
+                        } else {
+                            config.ajax.transformRequest = function(data) {
+                                return this.toParam(data);
+                            }.bind(this);
+                        }
+                        angular.extend(def.ajax, config.ajax);
                         $http(config.ajax).success(function (data, status) {
                                 response = data;
                                 if (data instanceof Object) {//если вернули json
@@ -515,6 +519,9 @@ popup.factory("$popupWindow", [
                         scope.$on("window:htmlContent", function (e, elem, attr) {
                             new Content(elem, 'html');
                         });
+                        break;
+                    case 'inline':
+
                         break;
                 }
             },
@@ -589,7 +596,7 @@ popup.factory("$popupWindow", [
                     } else {
                         windowSectors.fullscreen.el.removeClass("win-close").addClass("win-show");
                     }
-                }, 50);
+                }, 100);
                 this.body.style.overflow = "hidden";
                 this._callEvent('afterContentLoaded', this.currContent, windowSectors, response);
             },
