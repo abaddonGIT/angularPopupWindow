@@ -128,6 +128,14 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', '$compi
                     userControl: true
                 });
                 break;
+            case 'inline':
+                window.open({
+                    el: angular.element(target),
+                    winType: 'inline',
+                    innerTpl: 'tpl/contentTpl.html',
+                    source: 'data-block'
+                });
+                break;
         };
     };
     /*
@@ -167,7 +175,7 @@ app.controller("baseController", ['$scope', '$document', '$popupWindow', '$compi
 
     $scope.cancelFullScreen = function () {
         window.cancelFullScreen();
-    }
+    };
 
     /*
     * Пользовательская обработка результата при подгрузки картинки
