@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="app" id="ng-app">
+    <head>
+        <meta charset="utf-8" />
+        <link rel="stylesheet" href="css/style.css" />
+        <title></title>
+    </head>
+    <body ng-controller="baseController">
+        
+        <a href="img/1.jpg" ng-click="open($event)" id="test1">
+            <img src="img/1.jpg" alt="" width="150" />
+        </a>
+        <script src="js/libs/angular/angular.min.js"></script>
+        <script src="js/popup/popup.js"></script>
+        <script src="js/main.js"></script>
+        <div ng-popup-win options="options" win="win"></div>
+    </body>
+</html>
