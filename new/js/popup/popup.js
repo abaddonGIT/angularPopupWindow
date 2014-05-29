@@ -12,17 +12,11 @@ win.factory("$tplCache", ["$cacheFactory", function ($cacheFactory) {
     return $cacheFactory("tplCache");
 } ]);
 //Сектора окна
-win.value("$sectors", {
-    wrap: null
-});
+win.value("$sectors", {});
 //Разбивает шаблон по секторам
 win.directive("ngSectors", ['$sectors', function ($sectors) {
     return function (scopem, elem, attr) {
-        switch (attr.ngSectors) {
-            case 'wrap':
-                $sectors['wrap'] = elem;
-                break;
-        }
+        $sectors[attr.ngSectors] = elem;
     };
 } ]);
 //Формирует блон окна
