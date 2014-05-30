@@ -1,11 +1,11 @@
 /**
- * Created by netBeans.
- * Name: popupWindow
- * User: Abaddon
- * Date: 29.04.14
- * Time: 17:15
- * Description: Open popup window
- */
+* Created by netBeans.
+* Name: popupWindow
+* User: Abaddon
+* Date: 29.04.14
+* Time: 17:15
+* Description: Open popup window
+*/
 var win = angular.module('popupWindow', []);
 //Кэш для шаблонов
 win.factory("$tplCache", ["$cacheFactory", function ($cacheFactory) {
@@ -71,6 +71,8 @@ win.factory("$popupWindow", [
                 source: null,
                 scope: null,
                 type: 'image',
+                href: null,
+                imageClass: 'resize',
                 win_id: null,
                 innerTpl: 'tpl/defInnerTpl.html',
                 fullScreenTpl: 'tpl/defFullScreenTpl.html',
@@ -115,7 +117,7 @@ win.factory("$popupWindow", [
                 this._loadTpl.call(win, 'innerTpl', function () {
                     //Шаблон подгружен, теперь дело за контентом
                     this._getContent(win);
-                }.bind(this));
+                } .bind(this));
             };
             //Закрытие окна
             this.close = function () {
@@ -127,9 +129,9 @@ win.factory("$popupWindow", [
                 if (this.currWindow) {
                     this.delay(function () {
                         this._resizeWindow();
-                    }.bind(this));
+                    } .bind(this));
                 }
-            }.bind(this));
+            } .bind(this));
             config.locScope.win = this;
             thatWin = this;
         };
@@ -150,16 +152,18 @@ win.factory("$popupWindow", [
                 if (this.currWindow.resize) {
                     scope.content.width = newSize.wrap;
                     //Пересчет размера картинки
-                    var imageSize = this.currWindow._getImageSize(elem);
-                    scope.param.width = imageSize[0];
-                    scope.param.height = imageSize[1];
+                    if (this.currWindow.imgResize) {
+                        var imageSize = this.currWindow._getImageSize(elem);
+                        scope.param.width = imageSize[0];
+                        scope.param.height = imageSize[1];
+                    }
                 }
                 this.updateScope();
             },
             //Подгружает шаблон
             _loadTpl: function (name, after) {
-                var mark = $sectors.wrap[0].querySelector("[mark=" + this[name + 'Mark'] + "]"),//Поиск блока в html
-                    tpl = $tplCache.get(this[name + 'Mark']);//Поиск в хранилище
+                var mark = $sectors.wrap[0].querySelector("[mark=" + this[name + 'Mark'] + "]"), //Поиск блока в html
+                    tpl = $tplCache.get(this[name + 'Mark']); //Поиск в хранилище
 
                 if (!mark && !tpl) {//Если везде пусто
                     $http.post(this[name]).success(function (template) {
@@ -170,7 +174,7 @@ win.factory("$popupWindow", [
                         //Сохраняем шаблон в кэш
                         $tplCache.put(this[name + 'Mark'], template);
                         after();
-                    }.bind(this));
+                    } .bind(this));
                 } else if (!mark && tpl) {//Если нет в html, но есть в хранилище
                     $sectors.wrap.html(tpl);
                     var content = $sectors.wrap.contents();
@@ -181,27 +185,40 @@ win.factory("$popupWindow", [
                 }
             },
             _getContent: function (win) {
-                //определяем источник картинки
-                switch (win.type) {
-                    case 'image':
-                        var tag = win.target[0].tagName, link;
-                        switch (tag) {
-                            case "IMG":
-                                link = win.target.attr('src');
-                                win._getImage(link);
-                                break;
-                            case "A":
-                                link = win.target.attr('href');
-                                win._getImage(link);
-                                break;
-                            default://Если в качестве элемента выступает другой элемент то ссылка на картинку ищется в аттрибуте переданном через source
-                                link = win.target[0].getAttribute(win.source);
-                                win._getImage(link);
-                        }
+                var tag = win.target ? win.target[0].tagName : 'noelem', link;
+                //Тип подгрузки
+                switch (tag) {
+                    case "IMG":
+                        link = win.target.attr('src');
                         break;
-                    case 'ajax':
+                    case "A":
+                        link = win.target.attr('href');
+                        break;
+                    case "noelem":
+                        link = win.href;
+                        break;
+                    default: //Если в качестве элемента выступает другой элемент то ссылка на картинку ищется в аттрибуте переданном через source
+                        link = win.target[0].getAttribute(win.source);
+                };
 
-                        break;
+                link = link || win.href;
+                if (link) {
+                    switch (win.type) {
+                        case 'image': //Просто подгружает картинку 
+                            win._getImage(link, function (result) {
+                                //Говорим что картинка подгружена и готова к вставке
+                                scope.$emit('content:ready', result);
+                            });
+                            break;
+                        case 'ajax': //Запросы через ajax возвращаться может все что угодно
+                            win._getAjax(link);
+                            break;
+                        case 'inline': //просто подгрузить контен по ссылке (только кусок html)
+                            win._getInline(link);
+                            break;
+                    }
+                } else {
+                    throw ("Не получилось отыскать ссылку на запрашиваемый контент!");
                 }
                 //Ожидает сигнала о готовности контента
                 scope.$on("content:ready", function (e, result) {
@@ -216,7 +233,7 @@ win.factory("$popupWindow", [
                         angular.element($document[0].body).css('overflow', 'hidden');
                     }, 100);
                     this.updateScope();
-                }.bind(this));
+                } .bind(this));
             },
             //Размеры окна
             _winSize: function () {
@@ -248,14 +265,18 @@ win.factory("$popupWindow", [
             //Конфиг вызова
             angular.extend(this, winConfig, options);
             //Обертка jQuery lite
-            if (!this.target[0]) {
-                this.target = angular.element(this.target);
+            if (this.target) {
+                this.target = this.target[0] ? this.target : angular.element(this.target);
+            } else {//если элемент не передан
+                this.noelem = true;
             }
+            //Метод ajax запроса
+            this.ajax.method = this.ajax.method.toUpperCase();
             //Метка времени
             this.timestamp = Date.now();
             //Если pushState true, то пятаемся взять аттрибут id для маркировки окна
             if (this.pushState) {
-                this.win_id = this.target[0].id;
+                this.win_id = this.win_id || this.target[0].id;
             }
             //Формирование подписей для шаблонов        
             this.innerTplMark = this.innerTpl.replace(/[\/,\.]/g, '__');
@@ -265,7 +286,51 @@ win.factory("$popupWindow", [
             return this;
         };
         Window.prototype = {
-            _getImage: function (link) {
+            _getAjax: function (link) {
+                var win = this;
+                switch (win.ajax.method) {
+                    case 'POST':
+
+                        break;
+                    case 'GET':
+
+                        break;
+                    default:
+                        throw ('Ваш метод отправки не поддерживается!');
+                };
+                win.ajax.url = link;
+                $http(win.ajax).success(function (data) {
+                    if (angular.isObject(data)) {//json
+                        console.log(data);
+                    } else {//html
+                        
+                    }
+                });
+            },
+            _getInline: function (link) {
+                var win = this;
+                $http.post(link).success(function (data) {
+                    if ($sectors.content) {
+                        $sectors.content.html(data);
+                        var content = $sectors.content.contents();
+                        $compile(content)(scope);
+                        //проверка на изображение для резайза
+                        var resImg = $sectors.content[0].querySelector("img." + win.imageClass);
+                        if (resImg) {
+                            var link = resImg.src;
+                            win._getImage(link, function (result) {
+                                result.data = data;
+                                scope.$emit('content:ready', result);
+                            });
+                        } else {
+                            scope.$emit('content:ready', data);
+                        }
+                    } else {
+                        throw ("При типе вызова inline в подгружаемом шаблоне должна быть диектива ng-sectors='content'");
+                    }
+                });
+            },
+            _getImage: function (link, after) {
                 var img = new Image(), win = this, result = {};
                 img.onload = function () {
                     angular.extend(result, {
@@ -278,11 +343,12 @@ win.factory("$popupWindow", [
                     var newSize = win._getImageSize(result);
                     result.width = newSize[0];
                     result.height = newSize[1];
-                    //Говорим что картинка подгружена и готова к вставке
-                    scope.$emit('content:ready', result);
+                    //Даем добро на ресайз картинки
+                    win.imgResize = true;
+                    after(result);
                 };
                 img.onerror = function () {
-                    throw('Картинки с таким адресом не существует!');
+                    throw ('Картинки с таким адресом не существует!');
                 };
                 img.src = link;
             },

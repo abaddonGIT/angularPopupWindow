@@ -72,9 +72,41 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
         $scope.open = function (e) {
             e.preventDefault();
             var elem = e.currentTarget;
-            win.open({
-                target: elem
-            });
+            switch (elem.className) {
+                case 'attr':
+                    win.open({
+                        target: elem,
+                        source: "data-img"
+                    });
+                    break;
+                case 'inline':
+                    win.open({
+                        target: elem,
+                        type: 'inline',
+                        innerTpl: 'tpl/inlineTpl.html'
+                    });
+                    break;
+                case 'ajax':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        innerTpl: 'tpl/ajaxTpl.html'
+                    });
+                    break;
+                default:
+                    win.open({
+                        target: elem
+                    });
+            }
         };
+
+        var el = $document[0].querySelector('.no-elem');
+        angular.element(el).on('click', function () {
+            win.open({
+                type: 'inline',
+                href: 'tpl/test.html',
+                innerTpl: 'tpl/inlineTpl.html'
+            });
+        });
     });
 } ]);

@@ -13,6 +13,11 @@
         <a href="img/16.jpg" ng-click="open($event)" id="test2">
             <img src="img/16.jpg" alt="" width="150" />
         </a>
+        <div class="attr" data-img="img/13.jpg" ng-click="open($event)">Открыть из аттрибута</div>
+        <a href="tpl/test.html" class="inline" ng-click="open($event)">Просто получить контент по ссылке</a>
+        <a class="no-elem">Вызвать окно не передавая элемент</a>
+        <a href="test.php" class="ajax" ng-click="open($event)">Подгрузить через ajax</a>
+        
         <script src="js/libs/angular/angular.min.js"></script>
         <script src="js/popup/popup.js"></script>
         <script src="js/main.js"></script>
