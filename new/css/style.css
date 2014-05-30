@@ -31,6 +31,10 @@ body {
     visibility: visible;
 }
 
+#content {
+    text-align: center;
+}
+
 /*Эффекты*/
 [class*="win-effect-"] {
     -webkit-transition-property: -webkit-transform, opacity, visibility;
