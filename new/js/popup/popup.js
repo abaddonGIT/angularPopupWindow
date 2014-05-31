@@ -48,6 +48,44 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', function ($popupWindo
         }
     };
 } ]);
+/*
+* Сохранение конфига вызова окна в localStorage
+*/
+win.factory("$storage", [function () {
+    //Сохраняет объект в хранилище
+    var setItem = function (item) {
+        console.log(item);
+        var config = JSON.stringify(item, function (key, value) {
+            switch (key) {
+                case 'target':
+                case 'scope':
+                    return undefined;
+                    break;
+                case 'beforeContentLoaded':
+                case 'beforePagination':
+                case 'afterContentLoaded':
+                    return value.toString();
+                    break;
+            }
+            return value;
+        });
+        localStorage.setItem(item.win_id, config);
+    };
+    //Достает из хранилища
+    var getItem = function (name) {
+        return JSON.parse(localStorage[name]);
+    };
+
+    var clear = function () {
+        localStorage.clear();
+    };
+
+    return {
+        set: setItem,
+        get: getItem,
+        clear: clear
+    };
+} ]);
 //Конструктор вызова
 win.factory("$popupWindow", [
     '$rootScope',
@@ -58,7 +96,9 @@ win.factory("$popupWindow", [
     '$window',
     '$http',
     '$compile',
-    function ($rootScope, $timeout, $tplCache, $sectors, $document, $window, $http, $compile) {
+    '$storage',
+    '$location',
+    function ($rootScope, $timeout, $tplCache, $sectors, $document, $window, $http, $compile, $storage, $location) {
         "use strict";
         var config, thatWin, scope,
         //Дефолт для окна
@@ -134,6 +174,16 @@ win.factory("$popupWindow", [
             } .bind(this));
             config.locScope.win = this;
             thatWin = this;
+
+            //Востановление окна приперезагрузке
+            var searchString = $location.search();
+            if (searchString['win_id']) {
+                var config = $storage.get(searchString['win_id']);
+                if (!config.href) {
+                    config.target = $document[0].querySelector("#" + searchString['win_id']);
+                }
+                this.open(config);
+            }
         };
 
         WinModule.prototype = {
@@ -217,6 +267,10 @@ win.factory("$popupWindow", [
                             win._getInline(link);
                             break;
                     }
+                    //Записываем конфиг вызова в хранилище
+                    if (win.pushState) {
+                        $storage.set(win);
+                    }
                 } else {
                     throw ("Не получилось отыскать ссылку на запрашиваемый контент!");
                 }
@@ -232,8 +286,16 @@ win.factory("$popupWindow", [
                         $sectors.wrap.removeClass("win-close").addClass("win-show");
                         angular.element($document[0].body).css('overflow', 'hidden');
                     }, 100);
+                    this._updateUrl(win);
                     this.updateScope();
                 } .bind(this));
+            },
+            _updateUrl: function () {
+                if (this.currWindow['pushState']) {
+                    var searchString = $location.search();
+                    searchString['win_id'] = this.currWindow['win_id'];
+                    $location.search(searchString);
+                }
             },
             //Размеры окна
             _winSize: function () {
@@ -277,6 +339,7 @@ win.factory("$popupWindow", [
             //Если pushState true, то пятаемся взять аттрибут id для маркировки окна
             if (this.pushState) {
                 this.win_id = this.win_id || this.target[0].id;
+                if (!this.win_id) this.pushState = false;
             }
             //Формирование подписей для шаблонов        
             this.innerTplMark = this.innerTpl.replace(/[\/,\.]/g, '__');
@@ -299,13 +362,26 @@ win.factory("$popupWindow", [
                         throw ('Ваш метод отправки не поддерживается!');
                 };
                 win.ajax.url = link;
-                $http(win.ajax).success(function (data) {
+                var ajaxConfig = {};
+                angular.extend(ajaxConfig, winConfig.ajax, win.ajax);
+                $http(ajaxConfig).success(function (data) {
                     if (angular.isObject(data)) {//json
-                        console.log(data);
+                        //Проверяем есть ли картинка
+                        if (data.src) {
+                            win._getImage(data.src, function (result) {
+                                angular.extend(data, result);
+                                scope.$emit('content:ready', data);
+                            });
+                        } else {//Нсли нет картинки то просто вставляем контент
+                            scope.$emit('content:ready', data);
+                        }
                     } else {//html
-                        
+                        $sectors.content.html(data);
+                        var content = $sectors.content.contents();
+                        $compile(content)(scope);
+                        this._checkImgInContent(data);
                     }
-                });
+                } .bind(this));
             },
             _getInline: function (link) {
                 var win = this;
@@ -314,21 +390,24 @@ win.factory("$popupWindow", [
                         $sectors.content.html(data);
                         var content = $sectors.content.contents();
                         $compile(content)(scope);
-                        //проверка на изображение для резайза
-                        var resImg = $sectors.content[0].querySelector("img." + win.imageClass);
-                        if (resImg) {
-                            var link = resImg.src;
-                            win._getImage(link, function (result) {
-                                result.data = data;
-                                scope.$emit('content:ready', result);
-                            });
-                        } else {
-                            scope.$emit('content:ready', data);
-                        }
+                        this._checkImgInContent(data);
                     } else {
                         throw ("При типе вызова inline в подгружаемом шаблоне должна быть диектива ng-sectors='content'");
                     }
-                });
+                } .bind(this));
+            },
+            _checkImgInContent: function (data) {
+                //проверка на изображение для резайза
+                var resImg = $sectors.content[0].querySelector("img." + this.imageClass);
+                if (resImg) {
+                    var link = resImg.src;
+                    this._getImage(link, function (result) {
+                        result.data = data;
+                        scope.$emit('content:ready', result);
+                    });
+                } else {
+                    scope.$emit('content:ready', data);
+                }
             },
             _getImage: function (link, after) {
                 var img = new Image(), win = this, result = {};

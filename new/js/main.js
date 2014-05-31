@@ -90,7 +90,18 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                     win.open({
                         target: elem,
                         type: 'ajax',
-                        innerTpl: 'tpl/ajaxTpl.html'
+                        pushState: true,
+                        ajax: {
+                            method: 'get'
+                        },
+                        innerTpl: 'tpl/ajaxJsonTpl.html'
+                    });
+                    break;
+                case 'ajaxhtml':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        innerTpl: 'tpl/ajaxHtmlTpl.html'
                     });
                     break;
                 default:
