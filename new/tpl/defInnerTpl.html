@@ -1,6 +1,14 @@
-<div ng-sectors="content" id="content">
+<div id="content">
     <div ng-sector="header">
+        <h1>{{param.title}}</h1>
         <a ng-click="close()">Закрыть</a>
+        <a class="nav-prev" ng-show="nav.prev" ng-click="prev()">Назад</a>
+        <a class="nav-next" ng-show="nav.next" ng-click="next()">Вперед</a>
     </div>
-    <img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt=""/>
+    <div ng-sectors="content">
+        <img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt="" />
+    </div>
+    <div ng-sectors="footer">
+        {{index}} - {{count}}
+    </div>
 </div>

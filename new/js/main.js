@@ -83,6 +83,9 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                     win.open({
                         target: elem,
                         type: 'inline',
+                        requestParam: {
+                            title: "Заголовок 2"
+                        },
                         innerTpl: 'tpl/inlineTpl.html'
                     });
                     break;
@@ -94,6 +97,9 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                         ajax: {
                             method: 'get'
                         },
+                        requestParam: {
+                            id: elem.getAttribute('img')
+                        },
                         innerTpl: 'tpl/ajaxJsonTpl.html'
                     });
                     break;
@@ -104,9 +110,25 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                         innerTpl: 'tpl/ajaxHtmlTpl.html'
                     });
                     break;
+                case 'list ng-scope':
+                    win.open({
+                        target: elem,
+                        type: 'image',
+                        pushState: true,
+                        source: 'data-src',
+                        afterContentLoaded: function (eventName, win, sectors) {
+                            console.log(eventName);
+                            console.log(win);
+                            console.log(sectors);
+                        }
+                    });
+                    break;
                 default:
                     win.open({
-                        target: elem
+                        target: elem,
+                        requestParam: {
+                            title: "Заголовок"
+                        }
                     });
             }
         };
@@ -116,7 +138,10 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
             win.open({
                 type: 'inline',
                 href: 'tpl/test.html',
-                innerTpl: 'tpl/inlineTpl.html'
+                innerTpl: 'tpl/inlineTpl.html',
+                requestParam: {
+                    title: "Без элемента"
+                }
             });
         });
     });

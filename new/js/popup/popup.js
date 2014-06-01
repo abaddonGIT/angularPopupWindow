@@ -13,10 +13,25 @@ win.factory("$tplCache", ["$cacheFactory", function ($cacheFactory) {
 } ]);
 //Сектора окна
 win.value("$sectors", {});
+//Группы
+win.value("$groups", {});
 //Разбивает шаблон по секторам
 win.directive("ngSectors", ['$sectors', function ($sectors) {
     return function (scopem, elem, attr) {
         $sectors[attr.ngSectors] = elem;
+    };
+} ]);
+//Формирует набор картинок по группам
+win.directive("ngGroup", ["$groups", "$popupWindow", function ($groups, $popupWindow) {
+    return function (scope, elem, attr) {
+        var group = attr.ngGroup, unic = $popupWindow.unicid();
+        elem[0].setAttribute('unicid', unic);
+        if ($groups[group]) {
+            $groups[group].push({ unicid: unic, target: elem });
+        } else {
+            $groups[group] = [];
+            $groups[group].push({ unicid: unic, target: elem });
+        }
     };
 } ]);
 //Формирует блон окна
@@ -45,6 +60,13 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', function ($popupWindo
             scope.close = function () {
                 win.close();
             };
+            //Пагинация
+            scope.prev = function () {
+                win.prev();
+            };
+            scope.next = function () {
+                win.next();
+            };
         }
     };
 } ]);
@@ -54,7 +76,6 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', function ($popupWindo
 win.factory("$storage", [function () {
     //Сохраняет объект в хранилище
     var setItem = function (item) {
-        console.log(item);
         var config = JSON.stringify(item, function (key, value) {
             switch (key) {
                 case 'target':
@@ -98,7 +119,8 @@ win.factory("$popupWindow", [
     '$compile',
     '$storage',
     '$location',
-    function ($rootScope, $timeout, $tplCache, $sectors, $document, $window, $http, $compile, $storage, $location) {
+    '$groups',
+    function ($rootScope, $timeout, $tplCache, $sectors, $document, $window, $http, $compile, $storage, $location, $groups) {
         "use strict";
         var config, thatWin, scope,
         //Дефолт для окна
@@ -119,8 +141,9 @@ win.factory("$popupWindow", [
                 outPadding: 100,
                 padding: 10,
                 resizeDelay: 100,
+                requestParam: {},
                 ajax: {
-                    method: 'post',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' }
                 },
                 maxSizes: {
@@ -159,11 +182,25 @@ win.factory("$popupWindow", [
                     this._getContent(win);
                 } .bind(this));
             };
+            var searchString = $location.search();
             //Закрытие окна
             this.close = function () {
                 scope.show = false;
+                if (searchString['win_id']) {
+                    delete searchString['win_id'];
+                    $location.search(searchString);
+                }
+                angular.element($document[0].body).css('overflow', 'auto');
                 $sectors.wrap.removeClass("win-show").addClass("win-close");
             };
+            //Назад
+            this.prev = function () {
+                this.currWindow._navigate('prev');
+            };
+            //Вперед
+            this.next = function () {
+                this.currWindow._navigate('next');
+            },
             //Событие на ресайз
             angular.element($window).on("resize", function () {
                 if (this.currWindow) {
@@ -176,14 +213,61 @@ win.factory("$popupWindow", [
             thatWin = this;
 
             //Востановление окна приперезагрузке
-            var searchString = $location.search();
             if (searchString['win_id']) {
                 var config = $storage.get(searchString['win_id']);
                 if (!config.href) {
-                    config.target = $document[0].querySelector("#" + searchString['win_id']);
+                    //Дожидаемся, когда будет найден элемент с id из конфига
+                    var timer = function () {
+                        $timeout(function () {
+                            config.target = $document[0].querySelector("#" + searchString['win_id']);
+                            if (config.target) {
+                                this.open(config);
+                            } else {
+                                timer.call(this);
+                            }
+                        } .bind(this), 100);
+                    }
+                    timer.call(this);
                 }
-                this.open(config);
             }
+
+            //Ожидает сигнала о готовности контента
+            scope.$on("content:ready", function (e, result, win) {
+                //Записываем данные в scope
+                this.currWindow = win;
+                if (angular.isObject(result)) {
+                    scope.param = {};
+                    angular.extend(scope.param, win.requestParam, result);
+                } else {
+                    scope.param = win.requestParam;
+                }
+                scope.show = true;
+                //открытие окна
+                $timeout(function () {
+                    $sectors.wrap.removeClass("win-close").addClass("win-show");
+                    angular.element($document[0].body).css('overflow', 'hidden');
+                    //Навигация
+                    if (win.group) {
+                        var count = $groups[win.group].length;
+                        scope.count = count; //кол-во фоток с одинаковой группой
+                        scope.index = win.index + 1;
+                        if (count === 1) {
+                            scope.nav = { prev: false, next: false };
+                        } else if (win.index === 0) {
+                            scope.nav = { prev: false, next: true };
+                        } else if (win.index === count - 1) {
+                            scope.nav = { prev: true, next: false };
+                        } else {
+                            scope.nav = { prev: true, next: true };
+                        }
+                    } else {
+                        scope.nav = { prev: false, next: false };
+                    }
+                    this.callEvent("afterContentLoaded", win, $sectors);
+                } .bind(this), 100);
+                this._updateUrl(win);
+                this.updateScope();
+            } .bind(this));
         };
 
         WinModule.prototype = {
@@ -257,7 +341,7 @@ win.factory("$popupWindow", [
                         case 'image': //Просто подгружает картинку 
                             win._getImage(link, function (result) {
                                 //Говорим что картинка подгружена и готова к вставке
-                                scope.$emit('content:ready', result);
+                                scope.$broadcast('content:ready', result, win);
                             });
                             break;
                         case 'ajax': //Запросы через ajax возвращаться может все что угодно
@@ -274,21 +358,6 @@ win.factory("$popupWindow", [
                 } else {
                     throw ("Не получилось отыскать ссылку на запрашиваемый контент!");
                 }
-                //Ожидает сигнала о готовности контента
-                scope.$on("content:ready", function (e, result) {
-                    //Записываем данные в scope
-                    win.content = result;
-                    this.currWindow = win;
-                    scope.param = result;
-                    scope.show = true;
-                    //открытие окна
-                    $timeout(function () {
-                        $sectors.wrap.removeClass("win-close").addClass("win-show");
-                        angular.element($document[0].body).css('overflow', 'hidden');
-                    }, 100);
-                    this._updateUrl(win);
-                    this.updateScope();
-                } .bind(this));
             },
             _updateUrl: function () {
                 if (this.currWindow['pushState']) {
@@ -320,15 +389,26 @@ win.factory("$popupWindow", [
             //Запуск грязной проверки 
             updateScope: function () {
                 this.config.root.$$phase || this.config.root.$digest();
+            },
+            callEvent: function () {
+                var name = arguments[0], win = this.currWindow;
+                if (typeof win[name] === "string") {
+                    new Function('call = ' + win[name] + '; return call.apply(win, arguments);').apply(win, arguments);
+                } else {
+                    win[name].apply(win, arguments);
+                }
             }
         };
         //Конструктор окна
         var Window = function (options) {
+            //настроики с которыми было вызвано окно
+            this.callOptions = options;
             //Конфиг вызова
             angular.extend(this, winConfig, options);
             //Обертка jQuery lite
             if (this.target) {
                 this.target = this.target[0] ? this.target : angular.element(this.target);
+                this._getCurrUnicID();
             } else {//если элемент не передан
                 this.noelem = true;
             }
@@ -349,14 +429,67 @@ win.factory("$popupWindow", [
             return this;
         };
         Window.prototype = {
+            _navigate: function (phase) {
+                var index;
+                switch (phase) {
+                    case 'prev':
+                        index = this.index - 1;
+                        break;
+                    case 'next':
+                        index = this.index + 1;
+                        break;
+                };
+                var elem = $groups[this.group][index];
+                if (elem) {
+                    this.callOptions.target = elem.target;
+                    $sectors.wrap.removeClass("win-show").addClass("win-close");
+                    $timeout(function () {
+                        thatWin.open(this.callOptions);
+                    } .bind(this), 600);
+                } else {
+                    if (phase === "prev") {
+                        scope.nav.prev = false;
+                    } else {
+                        scope.nav.next = false;
+                    }
+                }
+            },
+            _getCurrUnicID: function () {
+                var unicid = this.unicid = this.target[0].getAttribute('unicid');
+                if (unicid) {
+                    this.group = this.target[0].getAttribute('ng-group');
+                    angular.forEach($groups[this.group], function (v, k) {
+                        if (v.unicid === unicid) {
+                            this.index = k;
+                        }
+                    } .bind(this));
+                }
+            },
             _getAjax: function (link) {
-                var win = this;
-                switch (win.ajax.method) {
+                var win = this, toParam = function (obj) {
+                    var requestStr = '';
+                    if (angular.isObject(obj)) {
+                        angular.forEach(obj, function (v, k) {
+                            if (angular.isObject(v)) {
+                                requestStr += toParam(obj[k]);
+                            } else {
+                                requestStr += k + '=' + v + '&';
+                            }
+                        });
+                        return requestStr.substr(0, requestStr.length - 1);
+                    } else {
+                        throw ("Дополнительные параметры должны передаваться в виде объекта!");
+                    }
+                };
+                switch (win.ajax.method.toUpperCase()) {
                     case 'POST':
-
+                        win.ajax.data = win.requestParam;
+                        win.ajax.transformRequest = function (data) {
+                            return toParam(data);
+                        } .bind(this);
                         break;
                     case 'GET':
-
+                        win.ajax.params = win.requestParam
                         break;
                     default:
                         throw ('Ваш метод отправки не поддерживается!');
@@ -370,10 +503,11 @@ win.factory("$popupWindow", [
                         if (data.src) {
                             win._getImage(data.src, function (result) {
                                 angular.extend(data, result);
-                                scope.$emit('content:ready', data);
+                                console.log(win);
+                                scope.$broadcast('content:ready', data, win);
                             });
                         } else {//Нсли нет картинки то просто вставляем контент
-                            scope.$emit('content:ready', data);
+                            scope.$broadcast('content:ready', data, win);
                         }
                     } else {//html
                         $sectors.content.html(data);
@@ -398,15 +532,15 @@ win.factory("$popupWindow", [
             },
             _checkImgInContent: function (data) {
                 //проверка на изображение для резайза
-                var resImg = $sectors.content[0].querySelector("img." + this.imageClass);
+                var resImg = $sectors.content[0].querySelector("img." + this.imageClass), win = this;
                 if (resImg) {
                     var link = resImg.src;
                     this._getImage(link, function (result) {
                         result.data = data;
-                        scope.$emit('content:ready', result);
+                        scope.$broadcast('content:ready', result, win);
                     });
                 } else {
-                    scope.$emit('content:ready', data);
+                    scope.$broadcast('content:ready', data, win);
                 }
             },
             _getImage: function (link, after) {
@@ -483,6 +617,10 @@ win.factory("$popupWindow", [
             }
         };
 
+        var getUnicId = function () {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        };
+
         return {
             create: function (options) {
                 return WinModule(options);
@@ -491,6 +629,7 @@ win.factory("$popupWindow", [
                 $timeout(function () {
                     callback(scope[name])
                 }, 0)
-            }
+            },
+            unicid: getUnicId
         }
     } ]);

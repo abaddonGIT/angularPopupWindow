@@ -16,9 +16,16 @@
         <div class="attr" data-img="img/13.jpg" ng-click="open($event)">Открыть из аттрибута</div>
         <a href="tpl/test.html" class="inline" ng-click="open($event)">Просто получить контент по ссылке</a>
         <a class="no-elem">Вызвать окно не передавая элемент</a>
-        <a href="test.php" class="ajax" ng-click="open($event)" id="win_first">Подгрузить через ajax (json)</a>
+        <a href="test.php" class="ajax" ng-click="open($event)" id="win_first" img="2">Подгрузить через ajax (json)</a>
         <a href="test2.php" class="ajaxhtml" ng-click="open($event)">Подгрузить через ajax (html)</a>
         
+        <!--Коллекция картинок-->
+        <ul id="firstCol">
+            <li ng-repeat="item in images" class="list" data-src="{{item.src}}" ng-group="fantasy" ng-click="open($event)" id="img_{{item.id}}">
+                <img src="{{item.src}}" width="150" alt="" />
+            </li>
+        </ul>
+
         <script src="js/libs/angular/angular.min.js"></script>
         <script src="js/popup/popup.js"></script>
         <script src="js/main.js"></script>
