@@ -126,6 +126,22 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                         }
                     });
                     break;
+                case 'ajaxlist ng-scope':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        href: 'test.php',
+                        pushState: true,
+                        requestParam: {
+                            id: elem.getAttribute('img')
+                        },
+                        beforePagination: function (eventName, win, sectors, elem) {
+                            win.requestParam = {
+                                id: elem.target[0].getAttribute('img')
+                            };
+                        }
+                    });
+                    break;
                 default:
                     win.open({
                         target: elem,

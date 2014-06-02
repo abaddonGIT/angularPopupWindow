@@ -18,10 +18,16 @@
         <a class="no-elem">Вызвать окно не передавая элемент</a>
         <a href="test.php" class="ajax" ng-click="open($event)" id="win_first" img="2">Подгрузить через ajax (json)</a>
         <a href="test2.php" class="ajaxhtml" ng-click="open($event)">Подгрузить через ajax (html)</a>
-        
+        <br />
         <!--Коллекция картинок-->
-        <ul id="firstCol">
+        <ul id="firstCol" style="float: left;">
             <li ng-repeat="item in images" class="list" data-src="{{item.src}}" ng-group="fantasy" ng-click="open($event)" id="img_{{item.id}}">
+                <img src="{{item.src}}" width="150" alt="" />
+            </li>
+        </ul>
+
+        <ul id="secondCol" style="float: left;">
+            <li ng-repeat="item in images" class="ajaxlist" ng-group="ajaxfantasy" ng-click="open($event)" id="img_ajax_{{item.id}}" img="{{item.id}}">
                 <img src="{{item.src}}" width="150" alt="" />
             </li>
         </ul>
