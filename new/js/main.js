@@ -100,6 +100,9 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                         requestParam: {
                             id: elem.getAttribute('img')
                         },
+                        beforeContentLoaded: function (eventName, win, sectors) {
+                            win.requestParam.title = "Заголовок был сменен в событии beforeContentLoaded";
+                        },
                         innerTpl: 'tpl/ajaxJsonTpl.html'
                     });
                     break;
@@ -116,10 +119,10 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                         type: 'image',
                         pushState: true,
                         source: 'data-src',
-                        afterContentLoaded: function (eventName, win, sectors) {
-                            console.log(eventName);
-                            console.log(win);
-                            console.log(sectors);
+                        beforeContentLoaded: function (eventName, win, sectors) {
+                            win.requestParam = {
+                                title: "Заголовок был сменен в событии beforeContentLoaded"
+                            };
                         }
                     });
                     break;
