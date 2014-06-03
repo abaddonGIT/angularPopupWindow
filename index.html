@@ -6,24 +6,35 @@
         <title></title>
     </head>
     <body ng-controller="baseController">
-        <div class="images">
-            <a ng-repeat="image in images" id="image_{{image.id}}" data-popup-window href="{{image.src}}" ng-click="open($event)" data-group="first" class="win-image"><img class="like" width="100" src="{{image.src}}" alt="" /></a>
-        </div>
-        <hr class="clear" />
-        <div>
-            <a style="cursor: pointer; display: block; margin: 5px 0;" ng-repeat="image in images" name="{{image.id}}" data-popup-window ng-click="open($event)" id="image_ajax_{{image.id}}" class="win-image-ajax" data-group="free">{{image.title}}</a>
-        </div>
-        <a href="img/01.jpg" id="image_html_{{image.id}}" data-popup-window ng-click="open($event)" class="win-html">
-            <img src="img/02.jpg" alt="" width="200" />
+        
+        <a href="img/1.jpg" ng-click="open($event)" id="test1">
+            <img src="img/1.jpg" alt="" width="150" />
         </a>
+        <a href="img/16.jpg" ng-click="open($event)" id="test2">
+            <img src="img/16.jpg" alt="" width="150" />
+        </a>
+        <div class="attr" data-img="img/13.jpg" ng-click="open($event)">Открыть из аттрибута</div>
+        <a href="tpl/test.html" class="inline" ng-click="open($event)">Просто получить контент по ссылке</a>
+        <a class="no-elem">Вызвать окно не передавая элемент</a>
+        <a href="test.php" class="ajax" ng-click="open($event)" id="win_first" img="2">Подгрузить через ajax (json)</a>
+        <a href="test2.php" class="ajaxhtml" ng-click="open($event)">Подгрузить через ajax (html)</a>
+        <br />
+        <!--Коллекция картинок-->
+        <ul id="firstCol" style="float: left;">
+            <li ng-repeat="item in images" class="list" data-src="{{item.src}}" ng-group="fantasy" ng-click="open($event)" id="img_{{item.id}}">
+                <img src="{{item.src}}" width="150" alt="" />
+            </li>
+        </ul>
 
-        <div ng-click="open($event)" class="win-json">Просто json без картинки</div>
+        <ul id="secondCol" style="float: left;">
+            <li ng-repeat="item in images" class="ajaxlist" ng-group="ajaxfantasy" ng-click="open($event)" id="img_ajax_{{item.id}}" img="{{item.id}}">
+                <img src="{{item.src}}" width="150" alt="" />
+            </li>
+        </ul>
 
-        <a class="inline" data-block="#inline">Inline block</a>
-        <div id="inline">Говоно</div>
         <script src="js/libs/angular/angular.min.js"></script>
         <script src="js/popup/popup.js"></script>
         <script src="js/main.js"></script>
-        <div data-popup-wrap></div>
+        <div ng-popup-win options="options" win="win"></div>
     </body>
 </html>

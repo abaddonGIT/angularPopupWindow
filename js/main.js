@@ -1,187 +1,167 @@
 var app = angular.module("app", ['popupWindow']);
-app.controller("baseController", ['$scope', '$document', '$popupWindow', '$compile', function ($scope, $document, $popupWindow, $compile) {
+app.controller("baseController", ['$scope', '$document', '$compile', '$popupWindow', function ($scope, $document, $compile, $popupWindow) {
 
     $scope.images = [
         {
-            src: 'img/01.jpg',
+            src: 'img/1.jpg',
             title: '1 картинка',
-            id: '01'
+            id: '1'
         },
         {
-            src: 'img/001.jpg',
+            src: 'img/2.jpg',
             title: '2 картинка',
-            id: '001'
+            id: '2'
         },
         {
-            src: 'img/02.jpg',
+            src: 'img/3.jpg',
             title: '3 картинка',
-            id: '02'
+            id: '3'
         },
         {
-            src: 'img/002.jpg',
+            src: 'img/4.jpg',
             title: '4 картинка',
-            id: '002'
+            id: '4'
         },
         {
-            src: 'img/03.jpg',
+            src: 'img/5.jpg',
             title: '5 картинка',
-            id: '03'
+            id: '5'
         },
         {
-            src: 'img/003.jpg',
+            src: 'img/6.jpg',
             title: '6 картинка',
-            id: '003'
+            id: '6'
         },
         {
-            src: 'img/04.jpg',
+            src: 'img/7.jpg',
             title: '7 картинка',
-            id: '04'
+            id: '7'
         },
         {
-            src: 'img/05.jpg',
+            src: 'img/8.jpg',
             title: '8 картинка',
-            id: '05'
+            id: '8'
         },
         {
-            src: 'img/06.jpg',
+            src: 'img/9.jpg',
             title: '9 картинка',
-            id: '06'
-        },
-        {
-            src: 'img/03.jpg',
-            title: '10 картинка',
-            id: '03'
+            id: '9'
         },
         {
             src: 'img/10.jpg',
-            title: '11 картинка',
+            title: '10 картинка',
             id: '10'
         },
         {
-            src: 'img/01.jpg',
+            src: 'img/11.jpg',
+            title: '11 картинка',
+            id: '11'
+        },
+        {
+            src: 'img/12.jpg',
             title: '12 картинка',
-            id: '01'
+            id: '12'
         }
     ];
-
-    var window = $scope.popup = $popupWindow.init({
-        scope: $scope
-    });
-
-    $scope.open = function (event) {
-        event.preventDefault();
-        var target = event.currentTarget;
-        //console.log(target.className);
-        switch (target.className) {
-            case 'win-image ng-scope':
-                window.open({
-                    el: angular.element(target),
-                    winType: "image",
-                    dataRequest: {
-                        title: "test",
-                        description: "ololosha"
-                    },
-                    beforeContentLoaded: function (config, sectors) {
-                        config.dataRequest.description = "Это штуковина работает!!!!";
-                    },
-                    beforePagination: function (item, sectors) {
-                        console.log(item);
-                    },
-                    afterContentLoaded: function (content, sectors, response) {
-                        console.log(content);
-                    }
-                });
-                break;
-            case 'win-image-ajax ng-scope ng-binding':
-                window.open({
-                    el: angular.element(target),
-                    winType: 'ajax',
-                    dataRequest: {
-                        id: target.getAttribute('name')
-                    },
-                    beforeContentLoaded: function (config, sectors) {
-                        console.log(sectors);
-                    }
-                });
-                break;
-            case 'win-html':
-                window.open({
-                    el: angular.element(target),
-                    winType: 'ajax',
-                    innerTpl: 'tpl/contentTpl.html',
-                    dataRequest: {
-                        title: 'Просто html код',
-                        type: 'html'
-                    }
-                });
-                break;
-            case 'win-json':
-                window.open({
-                    el: angular.element(target),
-                    winType: 'ajax',
-                    innerTpl: 'tpl/jsonTpl.html',
-                    dataRequest: {
-                        title: 'Простой ответ JSON',
-                        description: 'Полученные значения просто записываются в скоп',
-                        type: 'json'
-                    },
-                    userControl: true
-                });
-                break;
-            case 'inline':
-                window.open({
-                    el: angular.element(target),
-                    winType: 'inline',
-                    innerTpl: 'tpl/contentTpl.html',
-                    source: 'data-block'
-                });
-                break;
+    //Настройка модуля
+    $scope.options = {
+        locScope: $scope
+    };
+    //получение инстанса модуля
+    $popupWindow.getInstance($scope, 'win', function (win) {
+        $scope.open = function (e) {
+            e.preventDefault();
+            var elem = e.currentTarget;
+            switch (elem.className) {
+                case 'attr':
+                    win.open({
+                        target: elem,
+                        source: "data-img"
+                    });
+                    break;
+                case 'inline':
+                    win.open({
+                        target: elem,
+                        type: 'inline',
+                        requestParam: {
+                            title: "Заголовок 2"
+                        },
+                        innerTpl: 'tpl/inlineTpl.html'
+                    });
+                    break;
+                case 'ajax':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        pushState: true,
+                        ajax: {
+                            method: 'get'
+                        },
+                        requestParam: {
+                            id: elem.getAttribute('img')
+                        },
+                        beforeContentLoaded: function (eventName, win, sectors) {
+                            win.requestParam.title = "Заголовок был сменен в событии beforeContentLoaded";
+                        },
+                        innerTpl: 'tpl/ajaxJsonTpl.html'
+                    });
+                    break;
+                case 'ajaxhtml':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        innerTpl: 'tpl/ajaxHtmlTpl.html'
+                    });
+                    break;
+                case 'list ng-scope':
+                    win.open({
+                        target: elem,
+                        type: 'image',
+                        pushState: true,
+                        source: 'data-src',
+                        beforeContentLoaded: function (eventName, win, sectors) {
+                            win.requestParam = {
+                                title: "Заголовок был сменен в событии beforeContentLoaded"
+                            };
+                        }
+                    });
+                    break;
+                case 'ajaxlist ng-scope':
+                    win.open({
+                        target: elem,
+                        type: 'ajax',
+                        href: 'test.php',
+                        pushState: true,
+                        requestParam: {
+                            id: elem.getAttribute('img')
+                        },
+                        beforePagination: function (eventName, win, sectors, elem) {
+                            win.requestParam = {
+                                id: elem.target[0].getAttribute('img')
+                            };
+                        }
+                    });
+                    break;
+                default:
+                    win.open({
+                        target: elem,
+                        requestParam: {
+                            title: "Заголовок"
+                        }
+                    });
+            }
         };
-    };
-    /*
-    * Перед пагинацией
-     */
-    window.bind("window:beforePagination", function (e, item, sectors) {
-        window.config.dataRequest.id = item[0].getAttribute('name');
-    });
-    /*
-     * Перед загрузкой контента
-     */
-    window.bind("window:beforeContentLoaded", function (e, sectors) {
-        //console.log(sectors);
-    });
-    /*
-     * После подгрузки контента
-     */
-    window.bind("window:afterContentLoaded", function (e, content, sectors) {
-        //console.log(content);
-    });
-    //закрывает окно
-    $scope.close = function () {
-        window.closeWindow();
-    };
-    //Вперед
-    $scope.next = function () {
-        window.getNext();
-    };
-    //Назад
-    $scope.prev = function () {
-        window.getPrev();
-    };
 
-    $scope.fullScreen = function () {
-        window.fullScreen();
-    };
-
-    $scope.cancelFullScreen = function () {
-        window.cancelFullScreen();
-    };
-
-    /*
-    * Пользовательская обработка результата при подгрузки картинки
-     */
-    window.bind("window:userControll", function (e, item, sectors, response) {
-        console.log(item);
-        $scope.winpopup.inner.show = true;
+        var el = $document[0].querySelector('.no-elem');
+        angular.element(el).on('click', function () {
+            win.open({
+                type: 'inline',
+                href: 'tpl/test.html',
+                innerTpl: 'tpl/inlineTpl.html',
+                requestParam: {
+                    title: "Без элемента"
+                }
+            });
+        });
     });
 } ]);

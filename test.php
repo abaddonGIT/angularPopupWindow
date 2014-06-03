@@ -16,8 +16,8 @@ Nullam pellentesque feugiat turpis sit amet laoreet. Nulla tempus ipsum sed nisl
 
     $outer = array(
         //'items' => array(array('name' => 'hellow'), array('name' => 'hellow2'), array('name' => 'hellow3'))
-        'src' => "img/" . $_POST['id'] . ".jpg",
-        'id' => $_POST['id'],
+        'src' => "img/" . $_REQUEST['id'] . ".jpg",
+        'id' => $_REQUEST['id'],
         'title' => 'Картинка из json №' . $_POST['id'],
         'description' => 'amet laoreet.<b>' . $_POST['id'] . '</b> Nulla tempus ipsum sed nisl mattis congue. Dui'
     );
