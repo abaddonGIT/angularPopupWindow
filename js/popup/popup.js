@@ -1,11 +1,11 @@
 /**
-* Created by netBeans.
-* Name: popupWindow
-* User: Abaddon
-* Date: 29.04.14
-* Time: 17:15
-* Description: Open popup window
-*/
+ * Created by netBeans.
+ * Name: popupWindow
+ * User: Abaddon
+ * Date: 29.04.14
+ * Time: 17:15
+ * Description: Open popup window
+ */
 var win = angular.module('popupWindow', []);
 //Кэш для шаблонов
 win.factory("$tplCache", ["$cacheFactory", function ($cacheFactory) {
@@ -97,8 +97,8 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function
     };
 } ]);
 /*
-* Сохранение конфига вызова окна в localStorage
-*/
+ * Сохранение конфига вызова окна в localStorage
+ */
 win.factory("$storage", [function () {
     //Сохраняет объект в хранилище
     var setItem = function (item) {
@@ -136,8 +136,8 @@ win.factory("$storage", [function () {
     };
 } ]);
 /*
-* FullScreen api
-*/
+ * FullScreen api
+ */
 win.factory("$fullScreen", ['$document', '$rootScope', function ($document, $rootScope) {
     var d = $document[0];
     var open = function (elem) {
@@ -203,6 +203,7 @@ win.factory("$fullScreen", ['$document', '$rootScope', function ($document, $roo
 win.factory("$popupWindow", [
     '$rootScope',
     '$timeout',
+    '$interval',
     '$tplCache',
     '$sectors',
     '$document',
@@ -213,7 +214,7 @@ win.factory("$popupWindow", [
     '$location',
     '$groups',
     '$fullScreen',
-    function ($rootScope, $timeout, $tplCache, $sectors, $document, $window, $http, $compile, $storage, $location, $groups, $fullScreen) {
+    function ($rootScope, $timeout, $interval, $tplCache, $sectors, $document, $window, $http, $compile, $storage, $location, $groups, $fullScreen) {
         "use strict";
         var config, thatWin, scope, fullWatcher,
         //Дефолт для окна
@@ -274,9 +275,8 @@ win.factory("$popupWindow", [
                 var win = new Window(options);
                 //Подгрузка шаблона рабочей области
                 this._loadTpl.call(win, 'innerTpl', function () {
-                    //Шаблон подгружен, теперь дело за контентом
                     this._getContent(win);
-                } .bind(this));
+                }.bind(this));
             };
             var searchString = $location.search();
             //Событие на ресайз
@@ -284,9 +284,9 @@ win.factory("$popupWindow", [
                 if (this.currWindow) {
                     this.delay(function () {
                         this._resizeWindow();
-                    } .bind(this));
+                    }.bind(this));
                 }
-            } .bind(this));
+            }.bind(this));
             config.locScope.win = this;
             thatWin = this;
             //Востановление окна приперезагрузке
@@ -301,7 +301,7 @@ win.factory("$popupWindow", [
                         } else {
                             timer.call(this);
                         }
-                    } .bind(this), 100);
+                    }.bind(this), 100);
                 }
                 timer.call(this);
             }
@@ -343,10 +343,10 @@ win.factory("$popupWindow", [
                         scope.nav = { prev: false, next: false };
                     }
                     this.callEvent("afterContentLoaded", win, $sectors);
-                } .bind(this), 100);
+                }.bind(this), 100);
                 this._updateUrl(win);
                 this.updateScope();
-            } .bind(this));
+            }.bind(this));
             //Закрытие окна
             this.close = function () {
                 scope.show = false;
@@ -364,12 +364,12 @@ win.factory("$popupWindow", [
                 //Прослушка закрытия полноэкранного режима
                 fullWatcher = this.config.root.$on("window:fullScreenClose", function () {
                     this.unfull(win);
-                } .bind(this));
+                }.bind(this));
                 //Подгрузка шаблона для полноэкранного режима
                 this._loadTpl.call(win, 'fullScreenTpl', function () {
                     //Показываем во весь экран
                     $sectors.fullScreen.addClass("win-effect-1 win-show");
-                } .bind(this), 'fullScreen');
+                }.bind(this), 'fullScreen');
                 scope.fullscreen = true;
                 $fullScreen.openFullScreen($sectors.fullScreen[0]);
             };
@@ -405,7 +405,7 @@ win.factory("$popupWindow", [
                         }
                     }
                 }
-            } .bind(this));
+            }.bind(this));
         };
         //Методы модуля
         WinModule.prototype = {
@@ -446,15 +446,15 @@ win.factory("$popupWindow", [
                         $compile(content)(thatWin.config.sc);
                         //Сохраняем шаблон в кэш
                         $tplCache.put(this[name + 'Mark'], template);
-                        after();
-                    } .bind(this));
+                        after(template);
+                    }.bind(this));
                 } else if (!mark && tpl) {//Если нет в html, но есть в хранилище
                     $sectors[sector].html(tpl);
                     var content = $sectors[sector].contents();
                     $compile(content)(thatWin.config.sc);
-                    after();
+                    after(tpl);
                 } else {
-                    after();
+                    after(tpl);
                 }
             },
             _getContent: function (win) {
@@ -497,7 +497,12 @@ win.factory("$popupWindow", [
                         $storage.set(win);
                     }
                 } else {
-                    throw ("Не получилось отыскать ссылку на запрашиваемый контент!");
+                    //Если тип inline то проверяем доп. шаблон
+                    if (win.type === "inline") {
+                        win._getInline();
+                    } else {
+                        throw ("Не получилось отыскать ссылку на запрашиваемый контент!");
+                    }
                 }
             },
             _updateUrl: function () {
@@ -605,7 +610,7 @@ win.factory("$popupWindow", [
                     thatWin.callEvent("beforePagination", this.callOptions, $sectors, elem);
                     $timeout(function () {
                         thatWin.open(this.callOptions);
-                    } .bind(this), 600);
+                    }.bind(this), 600);
                 } else {
                     if (scope.slideshow) {
                         this.index = -1;
@@ -626,7 +631,7 @@ win.factory("$popupWindow", [
                         if (v.unicid === unicid) {
                             this.index = k;
                         }
-                    } .bind(this));
+                    }.bind(this));
                 }
             },
             _getAjax: function (link) {
@@ -650,7 +655,7 @@ win.factory("$popupWindow", [
                         win.ajax.data = win.requestParam;
                         win.ajax.transformRequest = function (data) {
                             return toParam(data);
-                        } .bind(this);
+                        }.bind(this);
                         break;
                     case 'GET':
                         win.ajax.params = win.requestParam
@@ -679,20 +684,25 @@ win.factory("$popupWindow", [
                         $compile(content)(scope);
                         this._checkImgInContent(data);
                     }
-                } .bind(this));
+                }.bind(this));
             },
             _getInline: function (link) {
                 var win = this;
-                $http.post(link).success(function (data) {
-                    if ($sectors.content) {
-                        $sectors.content.html(data);
-                        var content = $sectors.content.contents();
-                        $compile(content)(scope);
-                        this._checkImgInContent(data);
-                    } else {
-                        throw ("При типе вызова inline в подгружаемом шаблоне должна быть диектива ng-sectors='content'");
-                    }
-                } .bind(this));
+                if (link) {
+                    $http.post(link).success(function (data) {
+                        if ($sectors.content) {
+                            $sectors.content.html(data);
+                            var content = $sectors.content.contents();
+                            $compile(content)(scope);
+                            this._checkImgInContent(data);
+                        } else {
+                            throw ("При типе вызова inline в подгружаемом шаблоне должна быть диектива ng-sectors='content'");
+                        }
+                    }.bind(this));
+                } else {
+                    var data = {};
+                    this._checkImgInContent(data);
+                }
             },
             _checkImgInContent: function (data) {
                 //проверка на изображение для резайза
@@ -779,9 +789,13 @@ win.factory("$popupWindow", [
                 return WinModule(options);
             },
             getInstance: function (scope, name, callback) {
-                $timeout(function () {
-                    callback(scope[name])
-                }, 0)
+                var timer = $interval(function () {
+                    var instance = scope[name];
+                    if (instance) {
+                        $interval.cancel(timer);
+                        callback(instance)
+                    }
+                }, 100);
             },
             unicid: getUnicId
         }

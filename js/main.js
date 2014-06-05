@@ -81,7 +81,7 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
                     break;
                 case 'inline':
                     win.open({
-                        target: elem,
+                        //target: elem,
                         type: 'inline',
                         requestParam: {
                             title: "Заголовок 2"
