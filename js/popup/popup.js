@@ -49,44 +49,48 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function
             '</div>' +
             '</div><div ng-sectors="fullScreen" ng-show="fullscreen"></div>',
         link: function (scope, elem, attr) {
-            //Создаем объект окна
-            if (scope.options) {
-                scope.options.sc = scope;
-            } else {
-                scope.options = { sc: scope };
-            }
-            var win = $popupWindow.create(scope.options);
-            //Закрытие окна
-            scope.close = function () {
-                win.close();
-            };
-            //Пагинация
-            scope.prev = function () {
-                win.prev();
-            };
-            scope.next = function () {
-                win.next();
-            };
-            //Полноэкранный режим
-            scope.full = function () {
-                win.full();
-            };
-            //Выход из полноэкранного режима
-            scope.unfull = function () {
-                win.unfull();
-            }
-            var slideshow;
-            //слайдшоу для полноэкранного режима
-            scope.$watch("slideshow", function (value) {
+            scope.$watch("options", function (value) {
                 if (value !== undefined) {
-                    if (value) {
-                        $interval.cancel(slideshow);
-                        slideshow = $interval(function () {
-                            win.next();
-                        }, 5000);
+                    //Создаем объект окна
+                    if (scope.options) {
+                        scope.options.sc = scope;
                     } else {
-                        $interval.cancel(slideshow);
+                        scope.options = { sc: scope };
                     }
+                    var win = $popupWindow.create(scope.options);
+                    //Закрытие окна
+                    scope.close = function () {
+                        win.close();
+                    };
+                    //Пагинация
+                    scope.prev = function () {
+                        win.prev();
+                    };
+                    scope.next = function () {
+                        win.next();
+                    };
+                    //Полноэкранный режим
+                    scope.full = function () {
+                        win.full();
+                    };
+                    //Выход из полноэкранного режима
+                    scope.unfull = function () {
+                        win.unfull();
+                    }
+                    var slideshow;
+                    //слайдшоу для полноэкранного режима
+                    scope.$watch("slideshow", function (value) {
+                        if (value !== undefined) {
+                            if (value) {
+                                $interval.cancel(slideshow);
+                                slideshow = $interval(function () {
+                                    win.next();
+                                }, 5000);
+                            } else {
+                                $interval.cancel(slideshow);
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -601,7 +605,7 @@ win.factory("$popupWindow", [
                     thatWin.callEvent("beforePagination", this.callOptions, $sectors, elem);
                     $timeout(function () {
                         thatWin.open(this.callOptions);
-                    }.bind(this), 600);
+                    } .bind(this), 600);
                 } else {
                     if (scope.slideshow) {
                         this.index = -1;
