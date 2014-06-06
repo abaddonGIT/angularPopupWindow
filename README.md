@@ -129,21 +129,21 @@ app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $p
     <li>
         <h3>Пример шаблона внутренней части окна:</h3>
         <pre>
-<div id="content">
-    <div ng-sector="header">
-        <h1>{{param.title}}</h1>
-        <a ng-click="close()">Закрыть</a>
-        <a class="nav-prev" ng-show="nav.prev" ng-click="prev()">Назад</a>
-        <a class="nav-next" ng-show="nav.next" ng-click="next()">Вперед</a>
-    </div>
-    <div ng-sectors="content">
-        <img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt="" />
-    </div>
-    <div ng-sectors="footer">
-        <a ng-click="full()">Полноэкранный режим</a>
+&lt;div id="content"&gt;
+   &lt;div ng-sector="header"&gt;
+        &lt;h1&gt;{{param.title}}&lt;/h1&gt;
+        &lt;a ng-click="close()"&gt;Закрыть&lt;/a&gt;
+        &lt;a class="nav-prev" ng-show="nav.prev" ng-click="prev()"&gt;Назад&lt;/a&gt;
+        &lt;a class="nav-next" ng-show="nav.next" ng-click="next()"&gt;Вперед&lt;/a&gt;
+    &lt;/div&gt;
+    &lt;div ng-sectors="content"&gt;
+       &lt;img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt="" /&gt;
+    &lt;/div&gt;
+    &lt;div ng-sectors="footer"&gt;
+        &lt;a ng-click="full()"&gt;Полноэкранный режим&lt;/a&gt;
         {{index}} - {{count}}
-    </div>
-</div>
+    &lt;/div&gt;
+&lt;/div&gt;
 </pre>
 Стандартные методы окна жоступные в его шаблонах
     <ul>
