@@ -1,4 +1,4 @@
-angularPopupWindow
+angularPopupWindow (alpha version 2.0)
 ==================
 
 Скрипт модального окна на angular js.
@@ -12,13 +12,13 @@ angularPopupWindow
         В html шаблон необходимо поместить елемент в который будет подгруженно окно
         <pre>
 &lt;div ng-popup-win options="options" win="win"&gt;&lt;/div&gt;
-        </pre>
+</pre>
         Примеры елементов с вызовом
         <pre>
 &lt;a href="img/1.jpg" ng-click="open($event)" id="test1"&gt;
     &lt;img src="img/1.jpg" alt="" width="150" /&gt;
 &lt;/a&gt;
-        </pre>
+</pre>
         Тут также указывается с какими переменными в scope будет работать скрипт.
         <ul>
             <li>
@@ -51,7 +51,7 @@ app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $p
         };
     });
 }]);
-        </pre>
+</pre>
         Для открытия окна используется ф-я <b>open</b> нашего созданного объекта <b>win</b>. Параметры вызова:
         <ul>
             <li>
@@ -125,5 +125,107 @@ app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $p
             <li><b>afterClose</b> - ф-я отрабатывает после закрытия окна (ф-я получает текущий объект, объекты секторов окна)</li>
             <li><b>winResize</b> - ф-я отрабатывает при пересчете размера окна (ф-я получает текущий объект, объекты секторов окна и новые размеры)</li>
         </ul>
+    </li>
+    <li>
+        <h3>Пример шаблона внутренней части окна:</h3>
+        <pre>
+<div id="content">
+    <div ng-sector="header">
+        <h1>{{param.title}}</h1>
+        <a ng-click="close()">Закрыть</a>
+        <a class="nav-prev" ng-show="nav.prev" ng-click="prev()">Назад</a>
+        <a class="nav-next" ng-show="nav.next" ng-click="next()">Вперед</a>
+    </div>
+    <div ng-sectors="content">
+        <img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt="" />
+    </div>
+    <div ng-sectors="footer">
+        <a ng-click="full()">Полноэкранный режим</a>
+        {{index}} - {{count}}
+    </div>
+</div>
+</pre>
+Стандартные методы окна жоступные в его шаблонах
+    <ul>
+        <li>
+            <b>prev</b> - следующий слайд
+        </li>
+        <li>
+            <b>next</b> - предыдущий слайд
+        </li>
+        <li>
+            <b>close</b> - закрывает окно
+        </li>
+        <li>
+            <b>full</b> - переводит окно в полноэкранный режим
+        </li>
+        <li>
+            <b>unfull</b> - выход из полноэкранного режима
+        </li>
+    </ul>
+    Вы так же можите создавать свои ф-и и вешать их на элементы окна. Выглядеть это будет примерно так
+    <pre>
+$popupWindow.getInstance($scope, 'win', function (win) {
+   //Выбираем scope нашего окна
+   var sc = win.config.sc;
+   sc.testFunc = function () {
+        console.log("Я буду работать внутри окна!");
+   };
+});
+</pre>
+    Список стандартных переменных используеммых в окне:
+        <ul>
+            <li><b>nav.prev</b> - показывает есть ли предыдущий элемент</li>
+            <li><b>nav.next</b> - показывает есть ли следующий элемент</li>
+            <li><b>index</b> - порядковый номер текущего эемента в наборе</li>
+            <li><b>count</b> - общее кол-во элементов в наборе</li>
+            <li><b>param</b> - сюда попадают все остальные переменные полученные окном (например при типе "image", param.width и param.height представляют собой размеры картинки)</li>
+        </ul>
+    </li>
+    <li>
+        <h3>Пример шаблона для полноэкранного показа:</h3>
+        <pre>
+&lt;h3>({{index}} из {{count}})&lt;/h3&gt;
+&lt;a class="full-managment cancel" ng-click="unfull()"&gt;Обычный вид&lt;/a&gt;
+&lt;a ng-click="prev()" class="prev nav" ng-show="nav.prev"&gt;Назад&lt;/a&gt;
+&lt;a ng-click="next()" class="next nav" ng-show="nav.next"&gt;Вперед&lt;/a&gt;
+&lt;label id="slideshow" for="slides"&gt;&lt;input id="slides" type="checkbox" ng-model="slideshow"/&gt;Показ
+    слайдов&lt;/label&gt;
+&lt;div class="fullScreenImage"&gt;
+    &lt;img src="{{param.src}}" width="{{param.width}}" height="{{param.height}}" alt="" /&gt;
+&lt;/div&gt;
+</pre>
+    </li>
+    <li>
+        <h3>Сектора шаблона</h3>
+        Оно можно делить на сектора, которые будут сохраняться и будут доступны из callback - ков окна. Окно разбивается на сектора при помощи директивы
+        ngSector. Но практически всегда придется объявлять сектор "content", именно в него будет вставляться подгруженный код. Все остальные сектора вы именнуете сами и добавляете
+        как хотите.
+    </li>
+    <li>
+        <h3>Коллекция изображений</h3>
+        Для формирования коллекции однотипных изображений вам необходимо отнести их к одной группе. Делается это при помощи директивы <b>ngGroup</b>, которая вешается на элементе на котором
+        инициализируется окно.
+        <pre>
+&lt;ul&gt;
+    &lt;li ng-repeat="item in images" class="ajaxlist" ng-group="ajaxfantasy" ng-click="open($event)" id="img_ajax_{{item.id}}" img="{{item.id}}"&gt;
+        &lt;img src="{{item.src}}" width="150" alt="" /&gt;
+   &lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+Тут выводится список изображений, которые будут приписаны к группе <b>ajaxfantasy</b>. После открытия окна по этим эелементам будет доступна возможность переключения.
+<pre>
+win.open({
+    target: elem,
+    type: 'image',
+    pushState: true,
+    source: 'data-src',
+    beforeContentLoaded: function (eventName, win, sectors) {
+        win.requestParam = {
+            title: "Заголовок был сменен в событии beforeContentLoaded"
+        };
+    }
+});
+</pre>
     </li>
 </ol>
