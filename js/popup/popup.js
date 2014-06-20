@@ -35,8 +35,7 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function
     return {
         scope: {
             options: "=?",
-            win: "=?",
-            ngClick: "="
+            win: "=?"
         },
         replace: false,
         //Обертка для окна
