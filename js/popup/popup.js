@@ -53,6 +53,8 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function
                         scope.options = { sc: scope };
                     }
                     var win = $popupWindow.create(scope.options);
+                    //Возращаем наш объект модуля обратно в родительский scope
+                    scope.options.locScope.win = win;
                     //Закрытие окна
                     scope.close = function () {
                         win.close();
@@ -271,7 +273,7 @@ win.factory("$popupWindow", [
                 //Подгрузка шаблона рабочей области
                 this._loadTpl.call(win, 'innerTpl', function () {
                     this._getContent(win);
-                } .bind(this));
+                }.bind(this));
             };
             var searchString = $location.search();
             //Событие на ресайз
@@ -279,10 +281,10 @@ win.factory("$popupWindow", [
                 if (this.currWindow) {
                     this.delay(function () {
                         this._resizeWindow();
-                    } .bind(this));
+                    }.bind(this));
                 }
-            } .bind(this));
-            config.locScope.win = this;
+            }.bind(this));
+            //config.locScope.win = this;
             thatWin = this;
             //Востановление окна приперезагрузке
             if (searchString['win_id']) {
@@ -296,7 +298,7 @@ win.factory("$popupWindow", [
                         } else {
                             timer.call(this);
                         }
-                    } .bind(this), 100);
+                    }.bind(this), 100);
                 }
                 timer.call(this);
             }
@@ -338,10 +340,10 @@ win.factory("$popupWindow", [
                         scope.nav = { prev: false, next: false };
                     }
                     this.callEvent("afterContentLoaded", win, $sectors);
-                } .bind(this), 100);
+                }.bind(this), 100);
                 this._updateUrl(win);
                 this.updateScope();
-            } .bind(this));
+            }.bind(this));
             //Закрытие окна
             this.close = function () {
                 scope.show = false;
@@ -360,12 +362,12 @@ win.factory("$popupWindow", [
                 //Прослушка закрытия полноэкранного режима
                 fullWatcher = this.config.root.$on("window:fullScreenClose", function () {
                     this.unfull(win);
-                } .bind(this));
+                }.bind(this));
                 //Подгрузка шаблона для полноэкранного режима
                 this._loadTpl.call(win, 'fullScreenTpl', function () {
                     //Показываем во весь экран
                     $sectors.fullScreen.addClass("win-effect-1 win-show");
-                } .bind(this), 'fullScreen');
+                }.bind(this), 'fullScreen');
                 scope.fullscreen = true;
                 $fullScreen.openFullScreen($sectors.fullScreen[0]);
             };
@@ -401,7 +403,7 @@ win.factory("$popupWindow", [
                         }
                     }
                 }
-            } .bind(this));
+            }.bind(this));
         };
         //Методы модуля
         WinModule.prototype = {
@@ -441,7 +443,7 @@ win.factory("$popupWindow", [
                         content[0].setAttribute('mark', this[name + 'Mark']);
                         $compile(content)(thatWin.config.sc);
                         after(template);
-                    } .bind(this));
+                    }.bind(this));
                 } else {
                     after(tpl);
                 }
@@ -599,7 +601,7 @@ win.factory("$popupWindow", [
                     thatWin.callEvent("beforePagination", this.callOptions, $sectors, elem);
                     $timeout(function () {
                         thatWin.open(this.callOptions);
-                    } .bind(this), 600);
+                    }.bind(this), 600);
                 } else {
                     if (scope.slideshow) {
                         this.index = -1;
@@ -620,7 +622,7 @@ win.factory("$popupWindow", [
                         if (v.unicid === unicid) {
                             this.index = k;
                         }
-                    } .bind(this));
+                    }.bind(this));
                 }
             },
             _getAjax: function (link) {
@@ -644,7 +646,7 @@ win.factory("$popupWindow", [
                         win.ajax.data = win.requestParam;
                         win.ajax.transformRequest = function (data) {
                             return toParam(data);
-                        } .bind(this);
+                        }.bind(this);
                         break;
                     case 'GET':
                         win.ajax.params = win.requestParam
@@ -673,7 +675,7 @@ win.factory("$popupWindow", [
                         $compile(content)(scope);
                         this._checkImgInContent(data);
                     }
-                } .bind(this));
+                }.bind(this));
             },
             _getInline: function (link) {
                 var win = this;
@@ -687,7 +689,7 @@ win.factory("$popupWindow", [
                         } else {
                             throw ("При типе вызова inline в подгружаемом шаблоне должна быть диектива ng-sectors='content'");
                         }
-                    } .bind(this));
+                    }.bind(this));
                 } else {
                     var data = {};
                     this._checkImgInContent(data);
@@ -776,6 +778,13 @@ win.factory("$popupWindow", [
         return {
             create: function (options) {
                 return WinModule(options);
+            },
+            open: function (options) {
+                if (thatWin) {
+                    thatWin.open(options);
+                } else {
+                    throw ("Не могу найти текущий объект окна!");
+                }
             },
             getInstance: function (scope, name, callback) {
                 var timer = $interval(function () {
