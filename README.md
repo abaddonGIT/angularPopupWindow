@@ -3,7 +3,6 @@ angularPopupWindow (alpha version 2.0)
 
 Скрипт модального окна на angular js.
 <b><a href="http://angular.demosite.pro/popup/" target="_blank">Демка</b></a>
-<h2>Подключение</h2>
 <ol>
     <li>
         <h3>Установка:</h3>
