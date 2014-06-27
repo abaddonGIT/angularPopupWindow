@@ -34,7 +34,6 @@ win.directive("ngGroup", ["$groups", "$popupWindow", function ($groups, $popupWi
 win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function ($popupWindow, $rootScope, $interval) {
     return {
         scope: {
-            options: "=?",
             win: "=?"
         },
         replace: false,
@@ -44,50 +43,43 @@ win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function
             '</div>' +
             '</div><div ng-sectors="fullScreen" ng-show="fullscreen"></div>',
         link: function (scope, elem, attr) {
-            scope.$watch("options", function (value) {
+            //Создаем объект окна
+            var win = $popupWindow.create({ sc: scope });
+            //Сигналим что объект модуля был создан
+            var locScope = elem.scope();
+            //Говорим что модуль проинициализирован
+            locScope.$emit("win:ready", win);
+            //Закрытие окна
+            scope.close = function () {
+                win.close();
+            };
+            //Пагинация
+            scope.prev = function () {
+                win.prev();
+            };
+            scope.next = function () {
+                win.next();
+            };
+            //Полноэкранный режим
+            scope.full = function () {
+                win.full();
+            };
+            //Выход из полноэкранного режима
+            scope.unfull = function () {
+                win.unfull();
+            }
+            var slideshow;
+            //слайдшоу для полноэкранного режима
+            scope.$watch("slideshow", function (value) {
                 if (value !== undefined) {
-                    //Создаем объект окна
-                    if (scope.options) {
-                        scope.options.sc = scope;
+                    if (value) {
+                        $interval.cancel(slideshow);
+                        slideshow = $interval(function () {
+                            win.next();
+                        }, 5000);
                     } else {
-                        scope.options = { sc: scope };
+                        $interval.cancel(slideshow);
                     }
-                    var win = $popupWindow.create(scope.options);
-                    //Возращаем наш объект модуля обратно в родительский scope
-                    scope.options.locScope.win = win;
-                    //Закрытие окна
-                    scope.close = function () {
-                        win.close();
-                    };
-                    //Пагинация
-                    scope.prev = function () {
-                        win.prev();
-                    };
-                    scope.next = function () {
-                        win.next();
-                    };
-                    //Полноэкранный режим
-                    scope.full = function () {
-                        win.full();
-                    };
-                    //Выход из полноэкранного режима
-                    scope.unfull = function () {
-                        win.unfull();
-                    }
-                    var slideshow;
-                    //слайдшоу для полноэкранного режима
-                    scope.$watch("slideshow", function (value) {
-                        if (value !== undefined) {
-                            if (value) {
-                                $interval.cancel(slideshow);
-                                slideshow = $interval(function () {
-                                    win.next();
-                                }, 5000);
-                            } else {
-                                $interval.cancel(slideshow);
-                            }
-                        }
-                    });
                 }
             });
         }
@@ -223,6 +215,7 @@ win.factory("$popupWindow", [
                 effect: 1,
                 source: null,
                 scope: null,
+                locScope: null,
                 type: 'image',
                 href: null,
                 imageClass: 'resize',
@@ -256,7 +249,6 @@ win.factory("$popupWindow", [
             }
             //конфигурация модуля    
             config = this.config = {
-                locScope: null,
                 root: $rootScope,
                 windows: [],
                 currWindow: null,
@@ -284,7 +276,6 @@ win.factory("$popupWindow", [
                     }.bind(this));
                 }
             }.bind(this));
-            //config.locScope.win = this;
             thatWin = this;
             //Востановление окна приперезагрузке
             if (searchString['win_id']) {
@@ -785,15 +776,6 @@ win.factory("$popupWindow", [
                 } else {
                     throw ("Не могу найти текущий объект окна!");
                 }
-            },
-            getInstance: function (scope, name, callback) {
-                var timer = $interval(function () {
-                    var instance = scope[name];
-                    if (instance) {
-                        $interval.cancel(timer);
-                        callback(instance)
-                    }
-                }, 100);
             },
             unicid: getUnicId
         }

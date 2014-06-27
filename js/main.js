@@ -64,9 +64,9 @@ app.controller("baseController", ['$scope', '$document', '$compile', '$popupWind
         }
     ];
     //Настройка модуля
-    $scope.options = {
-        locScope: $scope
-    };
+    $scope.$on("win:ready", function (e, win) {
+       console.log(win);
+    });
 
     //получение инстанса модуля
     $scope.open = function (e) {
