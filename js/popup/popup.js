@@ -31,7 +31,7 @@ win.directive("ngGroup", ["$groups", "$popupWindow", function ($groups, $popupWi
     };
 } ]);
 //Формирует блон окна
-win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function ($popupWindow, $rootScope, $interval) {
+win.directive("ngPopupWin", ['$popupWindow', '$interval', function ($popupWindow, $interval) {
     return {
         scope: {},
         replace: false,
