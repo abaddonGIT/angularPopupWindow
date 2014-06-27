@@ -125,7 +125,7 @@ app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $p
     &lt;/div&gt;
 &lt;/div&gt;
 </pre>
-Стандартные методы окна жоступные в его шаблонах
+Стандартные методы окна доступные в его шаблонах
     <ul>
         <li>
             <b>prev</b> - следующий слайд
