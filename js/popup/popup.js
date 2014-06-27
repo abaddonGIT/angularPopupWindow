@@ -33,9 +33,7 @@ win.directive("ngGroup", ["$groups", "$popupWindow", function ($groups, $popupWi
 //Формирует блон окна
 win.directive("ngPopupWin", ['$popupWindow', '$rootScope', '$interval', function ($popupWindow, $rootScope, $interval) {
     return {
-        scope: {
-            win: "=?"
-        },
+        scope: {},
         replace: false,
         //Обертка для окна
         template: '<div id="window-wrap" ng-show="show"></div><div ng-show="show" id="wrap-inner" ng-style="{width:inner.width + \'px\', height:inner.height + \'px\', padding:inner.padding}">' +
