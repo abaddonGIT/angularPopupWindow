@@ -1,7 +1,7 @@
 angularPopupWindow (alpha version 2.0)
 ==================
 
-Скрипт модального окна на angular js.
+Скрипт модального окна на angular js. (IE9 и выше, Opera, Firefox, Chrome, Safary)
 <b><a href="http://angular.demosite.pro/popup/" target="_blank">Демка</b></a>
 <ol>
     <li>
