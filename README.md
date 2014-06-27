@@ -2,16 +2,19 @@ angularPopupWindow (alpha version 2.0)
 ==================
 
 Скрипт модального окна на angular js.
+<b><a href="http://angular.demosite.pro/popup/" target="_blank">Демка</b></a>
 <h2>Подключение</h2>
 <ol>
     <li>
+        <h3>Установка:</h3>
         <pre>var app = angular.module('app', ['popupWindow']);</pre>
     </li>
     <li>
         <h3>В шаблоне:</h3>
         В html шаблон необходимо поместить елемент в который будет подгруженно окно
         <pre>
-&lt;div ng-popup-win options="options" win="win"&gt;&lt;/div&gt;
+//Вызывается один раз на странице
+&lt;div ng-popup-win &gt;&lt;/div&gt;
 </pre>
         Примеры елементов с вызовом
         <pre>
@@ -19,36 +22,14 @@ angularPopupWindow (alpha version 2.0)
     &lt;img src="img/1.jpg" alt="" width="150" /&gt;
 &lt;/a&gt;
 </pre>
-        Тут также указывается с какими переменными в scope будет работать скрипт.
-        <ul>
-            <li>
-                <b>options</b> - название переменной в scope для конфигурации модуля (указывается в контроллере)
-            </li>
-            <li>
-                <b>win</b> - название переменной в scope куда будет сохранен объект окна
-            </li>
-        </ul>
     </li>
     <li>
         <h3>В контроллере:</h3>
         Для начало необходимо проинициализировать модуль:
         <pre>
 app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $popupWindow) {
-    //Передаем нашему модулю текущий scope
-    $scope.options = {
-        locScope: $scope
-    };
-    //После этого создастся новый объект окна и для работы с ним мы должны его получить
-    $popupWindow.getInstance($scope, 'win', function (win) {
-        //Тут мы можем отслежиывать события в окне
-        //Открываем окно
-        $scope.open = function (e) {
-            var elem = e.currentTarget;
-            win.open({
-                type: 'image',
-                target: elem
-            });
-        };
+    $popupWindow.open({
+        target: elem
     });
 }]);
 </pre>
@@ -165,8 +146,8 @@ app.controller("baseController", ['$scope', '$popupWindow', function ($scope, $p
     </ul>
     Вы так же можите создавать свои ф-и и вешать их на элементы окна. Выглядеть это будет примерно так
     <pre>
-$popupWindow.getInstance($scope, 'win', function (win) {
-   //Выбираем scope нашего окна
+//Это событие наступает когда был создан объект окна
+$scope.$on("win:ready", function (e, win) {
    var sc = win.config.sc;
    sc.testFunc = function () {
         console.log("Я буду работать внутри окна!");
