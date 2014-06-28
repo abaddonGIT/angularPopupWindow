@@ -10,12 +10,12 @@ angularPopupWindow (alpha version 2.0)
     </li>
     <li>
         <h3>В шаблоне:</h3>
-        В html шаблон необходимо поместить елемент, в который будет подгруженно окно
+        В html шаблон необходимо поместить элемент, в который будет подгруженно окно
         <pre>
 //Вызывается один раз на странице
 &lt;div ng-popup-win &gt;&lt;/div&gt;
 </pre>
-        Примеры елементов с вызовом
+        Примеры элементов с вызовом
         <pre>
 &lt;a href="img/1.jpg" ng-click="open($event)" id="test1"&gt;
     &lt;img src="img/1.jpg" alt="" width="150" /&gt;
